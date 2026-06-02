@@ -1,12 +1,11 @@
-<h1 align="center">
 <div align="center">
   <h1>SuiOutKit SDK</h1>
   <p>
     <a href="https://www.npmjs.com/package/suioutkit"><img src="https://img.shields.io/npm/v/suioutkit.svg" alt="npm version"/></a> 
-    <a href="/LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"/></a>
+    <a href="https://github.com/the3rdweblabs/suioutkit/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"/></a>
     <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-typed-3178c6.svg" alt="TypeScript"/></a>
   </p>
-</h1>
+</div>
 
 Browser SDK for SuiOutKit checkout: create sessions, open a ready-made payment modal, or build a custom UI with helpers.
 
