@@ -1,0 +1,44 @@
+---
+import { BookOpen, Github, Box, Server, ShieldCheck, Users } from "lucide-react";
+
+const year = 2026;
+const githubUrl = "https://github.com/the3rdweblabs/suioutkit";
+const licenseUrl = "https://github.com/the3rdweblabs/suioutkit/blob/main/LICENSE";
+---
+
+<footer class="site-footer">
+  <div class="site-footer__grid">
+    <div class="site-footer__col">
+      <div class="site-footer__title">Product</div>
+      <a class="site-footer__link" href="/docs/getting-started/quick-start"><Box size={14} /> Quick Start</a>
+      <a class="site-footer__link" href="/docs/getting-started/how-it-works"><Server size={14} /> How It Works</a>
+      <a class="site-footer__link" href="/docs/guides/sdk"><BookOpen size={14} /> SDK Reference</a>
+    </div>
+
+    <div class="site-footer__col">
+      <div class="site-footer__title">Docs</div>
+      <a class="site-footer__link" href="/docs/guides/backend-api"><Server size={14} /> Backend API</a>
+      <a class="site-footer__link" href="/docs/guides/environment"><ShieldCheck size={14} /> Environment</a>
+      <a class="site-footer__link" href="/docs/guides/security"><ShieldCheck size={14} /> Security</a>
+    </div>
+
+    <div class="site-footer__col">
+      <div class="site-footer__title">Community</div>
+      <a class="site-footer__link" href={githubUrl} target="_blank" rel="noopener noreferrer"><Github size={14} /> GitHub</a>
+      <a class="site-footer__link" href="https://github.com/the3rdweblabs"><Users size={14} /> The3rdWebLabs</a>
+      <a class="site-footer__link" href="https://github.com/CYBWithFlourish"><Users size={14} /> CYBWithFlourish</a>
+    </div>
+
+    <div class="site-footer__col">
+      <div class="site-footer__title">Company</div>
+      <a class="site-footer__link" href="/docs/developer-guide">Developer Guide</a>
+      <a class="site-footer__link" href="/docs/hosted-api">Hosted API</a>
+      <a class="site-footer__link" href="/docs">All docs</a>
+    </div>
+  </div>
+
+  <div class="site-footer__bottom">
+    <div class="site-footer__left">Built for the Sui ecosystem · <a href={licenseUrl} class="site-footer__link" target="_blank" rel="noopener noreferrer">GPL-3.0</a> · © {year}</div>
+    <div class="site-footer__right">Made with ♥ by The3rdWebLabs &amp; CYBWithFlourish</div>
+  </div>
+</footer>

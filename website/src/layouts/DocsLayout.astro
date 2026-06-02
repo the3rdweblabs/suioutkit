@@ -1,0 +1,25 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import DocsSidebar from "../components/DocsSidebar.astro";
+import DocsToc from "../components/DocsToc.astro";
+
+interface Props {
+  title: string;
+  description?: string;
+  headings?: { depth: number; slug: string; text: string }[];
+}
+
+const { title, description, headings = [] } = Astro.props;
+---
+
+<BaseLayout title={title} description={description} headerActive="docs">
+  <div class="docs-shell">
+    <DocsSidebar />
+    <div class="docs-main-wrap">
+      <article class="docs-main prose">
+        <slot />
+      </article>
+      <DocsToc headings={headings} />
+    </div>
+  </div>
+</BaseLayout>

@@ -1,0 +1,11 @@
+[package]
+name = "suioutkit"
+edition = "2024"         # edition = "legacy" to use legacy (pre-2024) Move
+license = "GPL-3.0"
+authors = ["@The3rdWebLabs(the3rdweblabs@gmail.com), @CYBWithFlourish(project.samclak@gmail.com)"]
+
+[dependencies]
+payment_kit = { r.mvr = "@mysten/payment-kit" }
+
+# Read more about the package management system options:
+# https://docs.sui.io/guides/developer/sui-101/move-package-management

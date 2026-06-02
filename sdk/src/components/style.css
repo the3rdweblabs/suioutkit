@@ -1,0 +1,751 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* SPDX-License-Identifier: GPL-3.0
+     Copyright (c) 2026 The3rdWebLabs (https://github.com/the3rdweblabs)
+     Author: @CYBWithFlourish (https://github.com/CYBWithFlourish)
+  */
+  --sok-font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --sok-bg: #ffffff;
+  --sok-card-bg: rgba(255, 255, 255, 0.9);
+  --sok-text: #1a1b1f;
+  --sok-text-muted: #64748b;
+  --sok-accent: #6366f1;
+  --sok-accent-hover: #4f46e5;
+  --sok-accent-grad: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --sok-border: rgba(0, 0, 0, 0.06);
+  --sok-shadow: 0px 8px 32px rgba(0, 0, 0, 0.12), 0px 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sok-bg: #0d0e12;
+    --sok-card-bg: rgba(18, 20, 26, 0.95);
+    --sok-text: #f3f4f6;
+    --sok-text-muted: #9ca3af;
+    --sok-border: rgba(255, 255, 255, 0.08);
+    --sok-shadow: 0px 16px 48px rgba(0, 0, 0, 0.4), 0px 2px 12px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.suioutkit-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  overflow-y: auto;
+  z-index: 99999;
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: var(--sok-font);
+}
+
+.suioutkit-overlay.active {
+  opacity: 1;
+}
+
+.suioutkit-card {
+  background: var(--sok-card-bg);
+  border: 1px solid var(--sok-border);
+  box-shadow: var(--sok-shadow);
+  border-radius: 24px;
+  width: 100%;
+  max-width: 420px;
+  padding: 24px;
+  position: relative;
+  transform: translateY(20px) scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.suioutkit-overlay.active .suioutkit-card {
+  transform: translateY(0) scale(1);
+}
+
+.suioutkit-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(120, 120, 120, 0.1);
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--sok-text);
+  font-size: 16px;
+  font-weight: 500;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.suioutkit-close:hover {
+  background: rgba(120, 120, 120, 0.2);
+  transform: rotate(90deg);
+}
+
+.suioutkit-header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.suioutkit-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--sok-text);
+  margin: 0 0 6px 0;
+  letter-spacing: -0.02em;
+}
+
+.suioutkit-subtitle {
+  font-size: 13px;
+  color: var(--sok-text-muted);
+  margin: 0;
+}
+
+.suioutkit-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.suioutkit-content {
+  width: 100%;
+}
+
+.suioutkit-summary {
+  display: none;
+}
+
+/* Option Buttons */
+.suioutkit-option {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 8px 16px;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.suioutkit-option:hover {
+  background: rgba(0, 0, 0, 0.04);
+  transform: scale(0.98);
+}
+
+@media (prefers-color-scheme: dark) {
+  .suioutkit-option {
+    background: transparent;
+  }
+
+  .suioutkit-option:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.suioutkit-option-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.suioutkit-option-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: contain;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  background: white;
+  /* Ensure white background for logos */
+  padding: 2px;
+}
+
+.suioutkit-option-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--sok-text);
+}
+
+/* Charge & Details Panel */
+.suioutkit-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 0;
+  width: 100%;
+}
+
+.suioutkit-back {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--sok-accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.suioutkit-back:hover {
+  text-decoration: underline;
+}
+
+.suioutkit-amount-box {
+  margin-bottom: 20px;
+}
+
+.sok-fiat-amt {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--sok-text);
+  letter-spacing: -0.03em;
+}
+
+/* Virtual Account Info Card */
+.sok-va-card {
+  background: rgba(120, 120, 120, 0.05);
+  border: 1px solid var(--sok-border);
+  border-radius: 20px;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+  text-align: left;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.sok-va-row {
+  margin-bottom: 12px;
+}
+
+.sok-va-row:last-child {
+  margin-bottom: 0;
+}
+
+.sok-va-lbl {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: var(--sok-text-muted);
+  letter-spacing: 0.05em;
+}
+
+.sok-va-val {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--sok-text);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sok-copy-btn {
+  background: var(--sok-accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.sok-copy-btn:hover {
+  opacity: 0.9;
+}
+
+.sok-copied-alert {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #10b981;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  opacity: 0;
+  transform: translateY(-5px);
+  transition: all 0.2s ease;
+}
+
+.sok-copied-alert.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Spinner Loader */
+.sok-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(120, 120, 120, 0.1);
+  border-radius: 50%;
+  border-top-color: var(--sok-accent);
+  animation: sok-spin 0.8s linear infinite;
+  margin: 8px auto 12px;
+}
+
+.sok-spinner.sok-spinner-compact {
+  margin: 0 auto 8px;
+}
+
+@keyframes sok-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sok-status-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sok-text-muted);
+  margin-top: 0;
+}
+
+.payment-status-ui {
+  width: 100%;
+}
+
+.payment-status-copy {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sok-text);
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .suioutkit-card {
+    max-width: none;
+    padding: 20px 16px;
+    border-radius: 20px;
+  }
+
+  .suioutkit-overlay {
+    padding: 8px;
+  }
+
+  .suioutkit-title {
+    font-size: 18px;
+  }
+
+  .suioutkit-option-content {
+    gap: 12px;
+  }
+}
+
+/* Successful Settlement View */
+.sok-success-icon {
+  font-size: 48px;
+  color: #10b981;
+  margin-bottom: 12px;
+}
+
+.sok-success-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--sok-text);
+  margin-bottom: 6px;
+}
+
+.sok-success-desc {
+  font-size: 13px;
+  color: var(--sok-text-muted);
+  margin-bottom: 20px;
+}
+
+.sok-success-details {
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  font-size: 12px;
+  color: var(--sok-text);
+}
+
+.sok-receipt-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.sok-receipt-row:last-child {
+  margin-bottom: 0;
+}
+
+.sok-receipt-lbl {
+  color: var(--sok-text-muted);
+  font-weight: 500;
+}
+
+.sok-receipt-val {
+  font-weight: 600;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sok-receipt-val a {
+  color: var(--sok-accent);
+  text-decoration: none;
+}
+
+.sok-receipt-val a:hover {
+  text-decoration: underline;
+}
+
+/* Form Fields for OPay / Wallet */
+.sok-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.sok-input {
+  background: rgba(120, 120, 120, 0.05);
+  border: 1px solid var(--sok-border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--sok-text);
+  outline: none;
+  box-sizing: border-box;
+  width: 100%;
+  transition: border-color 0.2s ease;
+}
+
+.sok-input:focus {
+  border-color: var(--sok-accent);
+}
+
+.sok-btn {
+  background: var(--sok-accent-grad);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  box-shadow: 0px 4px 12px rgba(99, 102, 241, 0.2);
+  transition: opacity 0.2s ease;
+}
+
+.sok-btn:hover {
+  opacity: 0.95;
+}
+
+.sok-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* outPay QR Code specifications */
+.sok-qr-card {
+  background: var(--sok-bg);
+  border: 1px solid var(--sok-border);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 16px;
+  box-shadow: inset 0px 2px 8px rgba(0, 0, 0, 0.05);
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.sok-qr-frame {
+  background: #ffffff;
+  /* Pure white background ensures perfect scanning visibility */
+  padding: 12px;
+  border-radius: 16px;
+  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 12px;
+  width: 204px;
+  height: 204px;
+  box-sizing: border-box;
+}
+
+.sok-qr-img {
+  width: 180px;
+  height: 180px;
+  display: block;
+}
+
+/* outPay overlay logo badge centered on the QR code */
+.sok-qr-logo-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 36px;
+  height: 36px;
+  background: var(--sok-accent-grad);
+  border-radius: 10px;
+  border: 3px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: white;
+  font-weight: 800;
+  box-shadow: 0px 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.sok-qr-scan-pulse {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0) 0%, rgba(99, 102, 241, 1) 50%, rgba(99, 102, 241, 0) 100%);
+  animation: sok-qr-scan 2.5s ease-in-out infinite;
+}
+
+@keyframes sok-qr-scan {
+  0% {
+    top: 0%;
+  }
+
+  50% {
+    top: 100%;
+  }
+
+  100% {
+    top: 0%;
+  }
+}
+
+/* Wallet List Container */
+.suioutkit-wallet-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  width: 100%;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 0;
+}
+
+/* Wallet Card */
+.sok-wallet-card {
+  background: rgba(120, 120, 120, 0.05);
+  border: 1px solid var(--sok-border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+}
+
+.sok-wallet-card:hover:not([style*="pointer-events: none"]) {
+  background: rgba(120, 120, 120, 0.08);
+  border-color: var(--sok-accent);
+  transform: translateY(-2px);
+  box-shadow: 0px 4px 12px rgba(99, 102, 241, 0.1);
+}
+
+.sok-wallet-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sok-wallet-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--sok-text);
+}
+
+/* Horizontal Progress Stepper */
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 18px 0 12px;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--sok-bg);
+  border: 2px solid var(--sok-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: var(--sok-text);
+}
+
+.circle.filled {
+  background: var(--sok-accent);
+  color: white;
+  border-color: var(--sok-accent);
+}
+
+.label {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--sok-text-muted);
+  text-align: center;
+  min-width: 60px;
+}
+
+.line {
+  position: absolute;
+  top: 16px;
+  /* align with circle center */
+  left: 100%;
+  width: 40px;
+  height: 2px;
+  background: var(--sok-border);
+}
+
+.step:not(:last-child) .line {
+  display: block;
+}
+
+.step:last-child .line {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .suioutkit-overlay {
+    align-items: flex-start;
+  }
+
+  .suioutkit-card {
+    width: min(100%, calc(100vw - 16px));
+    padding: 18px;
+    border-radius: 20px;
+    max-height: calc(100vh - 16px);
+  }
+
+  .suioutkit-summary,
+  .suioutkit-method-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .suioutkit-option {
+    padding: 12px;
+  }
+
+  .suioutkit-header {
+    margin-bottom: 18px;
+  }
+
+  .sok-fiat-amt {
+    font-size: 28px;
+  }
+
+  .sok-spinner {
+    margin-top: 4px;
+  }
+
+  .sok-va-card,
+  .sok-qr-card,
+  .sok-success-details {
+    padding: 16px;
+  }
+
+  .sok-va-val,
+  .sok-receipt-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .sok-receipt-val {
+    max-width: 100%;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .sok-qr-frame {
+    width: min(100%, 204px);
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+
+  .sok-qr-img {
+    width: 100%;
+    height: 100%;
+  }
+
+  .stepper {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin: 18px 0 8px;
+  }
+
+  .step {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .circle {
+    flex-shrink: 0;
+  }
+
+  .label {
+    margin-top: 0;
+    text-align: left;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .line {
+    display: none;
+  }
+
+  .payment-status-copy {
+    font-size: 12px;
+  }
+}

@@ -1,0 +1,25 @@
+---
+---
+<button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme" title="Theme">
+  <!-- icon will be set by script -->
+</button>
+
+<script type="module">
+const KEY = 'suioutkit-theme';
+const btn = document.getElementById('theme-toggle');
+function systemTheme(){return window.matchMedia('(prefers-color-scheme: dark)').matches? 'dark':'light'}
+function getStored(){const s=localStorage.getItem(KEY);return s==='light'||s==='dark'||s==='auto'?s:null}
+function apply(pref){const resolved = pref==='auto'?systemTheme():pref; document.documentElement.dataset.theme = resolved; localStorage.setItem(KEY,pref); updateButton(pref, resolved)}
+function updateButton(pref, resolved){if(!btn) return; btn.setAttribute('aria-pressed', pref!=='light'); if(pref==='auto'){btn.title = `Auto (${resolved})`; btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M2 12h20" stroke-linecap="round" stroke-linejoin="round"/></svg>`;} else if(pref==='dark'){btn.title='Dark'; btn.innerHTML=`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="4"/></svg>`;} else {btn.title='Light'; btn.innerHTML=`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>`;}}
+
+let pref = getStored() ?? 'auto'; apply(pref);
+
+const mq = window.matchMedia('(prefers-color-scheme: dark)');
+const onSys = ()=>{ if(localStorage.getItem(KEY)==='auto'){ apply('auto'); }};
+try{ mq.addEventListener('change', onSys);}catch(e){mq.addListener(onSys)}
+
+btn.addEventListener('click', ()=>{
+  pref = pref === 'auto' ? 'dark' : pref === 'dark' ? 'light' : 'auto';
+  apply(pref);
+});
+</script>

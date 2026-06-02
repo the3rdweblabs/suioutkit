@@ -1,0 +1,29 @@
+---
+import { docsNav } from "../config/docs-nav";
+
+const pathname = Astro.url.pathname;
+
+function isActive(href: string) {
+  return pathname === href || pathname === href + "/";
+}
+---
+
+<aside class="docs-sidebar">
+  <nav aria-label="Documentation">
+    {docsNav.map((group) => (
+      <div class="docs-sidebar__group">
+        <div class="docs-sidebar__label">{group.title}</div>
+        {group.children?.map((item) =>
+          item.href ? (
+            <a
+              href={item.href}
+              class:list={["docs-sidebar__link", { "docs-sidebar__link--active": isActive(item.href) }]}
+            >
+              {item.title}
+            </a>
+          ) : null
+        )}
+      </div>
+    ))}
+  </nav>
+</aside>

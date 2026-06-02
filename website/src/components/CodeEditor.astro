@@ -1,0 +1,30 @@
+---
+import { Code } from "astro:components";
+
+interface Props {
+  title?: string;
+  filename: string;
+  code: string;
+  lang?: string;
+}
+
+const { title = "editor", filename, code, lang = "ts" } = Astro.props;
+---
+
+<div class="code-editor">
+  <div class="code-editor__bar">
+    <div>
+      <div class="code-editor__title">{title}</div>
+      <div class="code-editor__file">{filename}</div>
+    </div>
+    <div class="code-editor__status">Ready</div>
+  </div>
+
+  <Code
+    code={code}
+    lang={lang}
+    themes={{ light: "github-light", dark: "github-dark-dimmed" }}
+    class="code-editor__body"
+    aria-label={filename}
+  />
+</div>

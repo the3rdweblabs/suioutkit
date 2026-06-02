@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services: {}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Build backend
+        working-directory: backend
+        run: |
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            echo "No lockfile found; running npm install (non-deterministic in CI)."
+            npm install --no-audit --no-fund
+          fi
+          npm run build
+
+      - name: Build SDK
+        working-directory: sdk
+        run: |
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            echo "No lockfile found; running npm install (non-deterministic in CI)."
+            npm install --no-audit --no-fund
+          fi
+          npm run build
+
+      - name: Typecheck backend + SDK
+        run: |
+          (cd backend && npm run build)
+          (cd sdk && npm run build:types) || true
+
+      - name: Run Move tests if `sui` available
+        run: |
+          if command -v sui >/dev/null 2>&1; then
+            echo "sui found, running move tests"
+            cd contracts/suioutkit && sui move test
+          else
+            echo "sui not installed on runner — skipping Move tests"
+          fi

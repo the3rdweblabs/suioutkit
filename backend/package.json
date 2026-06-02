@@ -1,0 +1,42 @@
+{
+  "name": "suioutkit-backend",
+  "version": "1.0.0",
+  "description": "Express Settle & Index Service for SuiOutKit",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+     "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsc -w & nodemon dist/index.js",
+    "treasury:balance": "node dist/scripts/treasury.js balance",
+    "treasury:deposit": "node dist/scripts/treasury.js deposit",
+    "treasury:withdraw": "node dist/scripts/treasury.js withdraw"
+  },
+  "keywords": [
+    "sui",
+    "fiat",
+    "onramp",
+    "flutterwave",
+    "grpc"
+  ],
+  "author": "SuiOutKit Team",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "@mysten/payment-kit": "^0.1.11",
+    "@mysten/sui": "^2.17.0",
+    "@mysten/walrus": "^1.1.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "ioredis": "^5.3.2",
+    "node-fetch": "^3.3.2",
+    "stripe": "^22.1.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.4",
+    "nodemon": "^3.0.2",
+    "typescript": "^5.3.3"
+  }
+}

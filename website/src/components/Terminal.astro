@@ -1,0 +1,43 @@
+---
+interface Props {
+  title?: string;
+  command: string;
+  prompt?: string;
+  id?: string;
+}
+const { title = "terminal", command, prompt = "$", id } = Astro.props;
+const copyId = id || `term-${Math.random().toString(36).slice(2, 9)}`;
+---
+
+<div class="terminal" data-terminal>
+  <div class="terminal__bar">
+    <span class="terminal__dot terminal__dot--red"></span>
+    <span class="terminal__dot terminal__dot--yellow"></span>
+    <span class="terminal__dot terminal__dot--green"></span>
+    <span class="terminal__title">{title}</span>
+    <button type="button" class="terminal__copy" data-copy={command} aria-label="Copy command">
+      Copy
+    </button>
+  </div>
+  <div class="terminal__body" id={copyId}>
+    <span class="terminal__prompt">{prompt} </span><span class="terminal__cmd">{command}</span>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll("[data-copy]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const text = btn.getAttribute("data-copy");
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        const el = btn as HTMLButtonElement;
+        const prev = el.textContent;
+        el.textContent = "Copied!";
+        setTimeout(() => { el.textContent = prev; }, 1500);
+      } catch {
+        /* ignore */
+      }
+    });
+  });
+</script>

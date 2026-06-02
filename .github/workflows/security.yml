@@ -1,0 +1,44 @@
+name: Security Checks
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch: {}
+
+jobs:
+  npm-audit:
+    name: npm audit (backend, sdk, website)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Run npm audit in packages
+        run: |
+          set -e
+          for d in backend sdk website; do
+            if [ -f "$d/package.json" ]; then
+              echo "=== Auditing $d ==="
+              (
+                cd "$d"
+                if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+                  npm ci
+                else
+                  echo "No lockfile found; running npm install (non-deterministic in CI)."
+                  npm install --no-audit --no-fund
+                fi
+                npm audit --audit-level=high
+              )
+            fi
+          done

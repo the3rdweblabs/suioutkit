@@ -1,0 +1,119 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import AsciiLogo from "../components/AsciiLogo.astro";
+import CodeEditor from "../components/CodeEditor.astro";
+import Terminal from "../components/Terminal.astro";
+import SdkTree from "../components/SdkTree.astro";
+import FeatureCard from "../components/FeatureCard";
+import { ArrowRight, Banknote, Blocks, Github, Package, Wallet } from "lucide-react";
+
+const githubUrl = "https://github.com/the3rdweblabs/suioutkit";
+---
+
+<BaseLayout title="SuiOutKit" description="Drop-in checkout SDK for Sui - one package, one modal, fiat and crypto." headerActive="home">
+  <section class="hero">
+    <div class="hero__glow"></div>
+    <div class="hero__content">
+      <AsciiLogo class="hero__ascii" />
+      <h1 class="hero__tagline">From checkout to settlement.</h1>
+      <p class="hero__sub">
+        The drop-in checkout SDK for Sui - one package, one modal, every major way to pay.
+        You integrate once; customers pay how they like.
+      </p>
+      <div class="hero__actions">
+        <a href="/docs/getting-started/quick-start" class="btn btn--primary">
+          <Package size={18} strokeWidth={1.75} />
+          Quick Start
+        </a>
+        <a href={githubUrl} class="btn btn--ghost" target="_blank" rel="noopener noreferrer">
+          <Github size={18} strokeWidth={1.75} />
+          GitHub
+        </a>
+      </div>
+      <Terminal title="bash" command="npm install suioutkit" />
+    </div>
+  </section>
+
+
+
+  <section class="section">
+    <h2 class="section__title">One integration. Every way to pay.</h2>
+    <p class="section__lead">
+      Everything merchants need to accept money and settle on Sui, without building a payment stack from scratch.
+    </p>
+    <div class="cards">
+      <FeatureCard
+        icon={Banknote}
+        title="Fiat"
+        description="Bank transfer and OPay (NGN), plus card checkout - built into the modal."
+      />
+      <FeatureCard
+        icon={Wallet}
+        title="Crypto"
+        description="Sui wallet and outPay in the same flow - no second integration."
+      />
+      <FeatureCard
+        icon={Blocks}
+        title="Settlement"
+        description="Payouts and receipts on Sui when checkout completes - handled for you."
+      />
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section__title">What's inside the package.</h2>
+    <p class="section__lead">A quick look at the SDK surface you import from npm.</p>
+    <SdkTree />
+  </section>
+
+  <section class="section">
+    <h2 class="section__title">Get started.</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step__num">1</div>
+        <div>
+          <h3 class="step__title">Install the SDK</h3>
+          <p class="step__desc">Add SuiOutKit to your app or storefront.</p>
+          <Terminal title="bash" command="npm install suioutkit" />
+        </div>
+      </div>
+      <div class="step">
+        <div class="step__num">2</div>
+        <div>
+          <h3 class="step__title">Set your merchant address</h3>
+          <p class="step__desc">Pass the Sui address where you want to receive settlement.</p>
+          <CodeEditor
+            title="checkout.ts"
+            filename="src/checkout.ts"
+            code='import { SuiOutKit } from "suioutkit";
+
+const sdk = new SuiOutKit({
+  merchantAddress: "0x...",
+});'
+          />
+        </div>
+      </div>
+      <div class="step">
+        <div class="step__num">3</div>
+        <div>
+          <h3 class="step__title">Open checkout</h3>
+          <p class="step__desc">Create a session and launch the modal - or use <code>wrapButton</code> for a one-liner.</p>
+          <CodeEditor
+            title="checkout.ts"
+            filename="src/checkout.ts"
+            code='sdk.initCheckout({
+  amount: 45000,
+  currency: "NGN",
+});'
+          />
+        </div>
+      </div>
+    </div>
+    <p style="text-align: center; margin-top: 48px;">
+      <a href="/docs/getting-started/quick-start" class="btn btn--primary">
+        Read the docs
+        <ArrowRight size={18} strokeWidth={1.75} />
+      </a>
+    </p>
+  </section>
+</BaseLayout>

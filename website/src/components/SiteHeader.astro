@@ -1,0 +1,42 @@
+---
+import ThemeToggle from "./ThemeToggle.astro";
+import { ArrowRight, BookOpen, Github, Home } from "lucide-react";
+
+interface Props {
+  active?: "home" | "docs";
+}
+const { active } = Astro.props;
+const githubUrl = "https://github.com/the3rdweblabs/suioutkit";
+---
+
+<header class="site-header">
+  <a href="/" class="site-header__brand">
+    <img src="/assets/logo.svg" alt="" class="site-header__logo" width="120" height="22" />
+    <span class="sr-only">SuiOutKit</span>
+  </a>
+  <nav class="site-header__nav" aria-label="Main">
+    <div class="site-header__nav-left">
+      <a href="/" class:list={["site-header__link", { "site-header__link--active": active === "home" }]}> 
+        <Home size={16} strokeWidth={1.75} />
+        <span class="site-header__link--text">Home</span>
+      </a>
+      <a
+        href="/docs/getting-started/installation"
+        class:list={["site-header__link", { "site-header__link--active": active === "docs" }]}
+      >
+        <BookOpen size={16} strokeWidth={1.75} />
+        <span class="site-header__link--text">Docs</span>
+      </a>
+    </div>
+    <div class="site-header__nav-right">
+      <a href={githubUrl} class="site-header__icon-link" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+        <Github size={18} strokeWidth={1.75} />
+      </a>
+      <ThemeToggle />
+      <a href="/docs/getting-started/quick-start" class="site-header__cta">
+        Get started
+        <ArrowRight size={16} strokeWidth={1.75} />
+      </a>
+    </div>
+  </nav>
+</header>
