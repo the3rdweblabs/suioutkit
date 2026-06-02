@@ -243,7 +243,7 @@ router.post("/charge", async (req: Request, res: Response) => {
  * SDK polling endpoint to check order completion state.
  */
 router.get("/status/:nonce", async (req: Request, res: Response) => {
-  const { nonce } = req.params;
+  const nonce = req.params.nonce as string;
   const session = await redisService.getSession(nonce);
 
   if (!session) {
@@ -413,7 +413,7 @@ router.post("/crypto/confirm", async (req: Request, res: Response) => {
  * SDK calls this before showing "Confirm Payment" button.
  */
 router.get("/validate/:nonce", async (req: Request, res: Response) => {
-  const { nonce } = req.params;
+  const nonce = req.params.nonce as string;
 
   try {
     const session = await redisService.getSession(nonce);
