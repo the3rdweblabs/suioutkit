@@ -719,7 +719,7 @@ pre {
 .section {
   max-width: var(--max-wide);
   margin: 0 auto;
-  padding: clamp(40px, 5vw, 56px) 24px;
+  padding: clamp(32px, 4vw, 44px) 24px;
 }
 
 .section__title {
@@ -733,7 +733,7 @@ pre {
 
 .section__lead {
   max-width: 560px;
-  margin: 0 auto 32px;
+  margin: 0 auto 24px;
   text-align: center;
   color: var(--text-muted);
   font-size: 16px;
@@ -1175,11 +1175,11 @@ pre {
   }
 
   .section {
-    padding: 34px 16px;
+    padding: 26px 16px;
   }
 
   .section__lead {
-    margin-bottom: 26px;
+    margin-bottom: 20px;
   }
 }
 
