@@ -11,6 +11,7 @@ import { getEnv } from "./config/env.js";
 import checkoutRouter from "./routes/checkout.js";
 import suiService from "./services/sui.js";
 import paymentsRouter from "./routes/payments.js";
+import redisService from "./services/redis.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -76,10 +77,24 @@ suiService.startIndexer((event) => {
 });
 
 // Launch server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`==================================================================`);
-  console.log(`SUIOUTKIT PAYMENT GATEWAY GATEWAY RUNNING ON PORT ${PORT}`);
+  console.log(`SUIOUTKIT PAYMENT GATEWAY RUNNING ON PORT ${PORT}`);
   console.log(`Health Check: http://localhost:${PORT}/health`);
   console.log(`Stylesheet Asset: http://localhost:${PORT}/style.css`);
   console.log(`==================================================================`);
 });
+
+// Graceful shutdown
+async function shutdown(signal: string) {
+  console.log(`\nReceived ${signal}. Shutting down gracefully...`);
+  server.close(() => {
+    console.log("HTTP server closed.");
+  });
+  await redisService.disconnect();
+  console.log("Redis disconnected.");
+  process.exit(0);
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

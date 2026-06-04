@@ -22,6 +22,7 @@ services:
       - backend/.env
     environment:
       - PORT=5000
+      - REDIS_MODE=local
       - REDIS_URL=redis://redis:6379
     depends_on:
       - redis

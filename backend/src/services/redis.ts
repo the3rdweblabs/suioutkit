@@ -2,37 +2,66 @@
 // Copyright (c) 2026 The3rdWebLabs (https://github.com/the3rdweblabs)
 // Author: @CYBWithFlourish (https://github.com/CYBWithFlourish)
 
-import { Redis } from "ioredis";
+import { Redis, RedisOptions } from "ioredis";
+import crypto from "crypto";
 import { getEnv } from "../config/env.js";
 import logger from "../utils/logger.js";
 
+const REDIS_MODE = getEnv("REDIS_MODE", "local");
 const REDIS_URL = getEnv("REDIS_URL", "redis://localhost:6379");
-const SESSION_TTL = 86400; // 24 hours in seconds
+const REDIS_HOST = getEnv("REDIS_HOST", "localhost");
+const REDIS_PORT = parseInt(getEnv("REDIS_PORT", "6379"), 10);
+const REDIS_PASSWORD = getEnv("REDIS_PASSWORD", "");
+const REDIS_TLS_ENABLED = getEnv("REDIS_TLS_ENABLED", "true") !== "false";
+const SESSION_TTL = parseInt(getEnv("SESSION_TTL", "86400"), 10); // 24 hours
+
+function buildOptions(): RedisOptions {
+  const opts: RedisOptions = {
+    maxRetriesPerRequest: 3,
+    retryStrategy: (times: number) => Math.min(times * 100, 2000),
+    enableReadyCheck: true,
+    lazyConnect: false,
+  };
+
+  if (REDIS_MODE === "live") {
+    opts.host = REDIS_HOST;
+    opts.port = REDIS_PORT;
+    if (REDIS_PASSWORD) {
+      opts.password = REDIS_PASSWORD;
+    }
+    if (REDIS_TLS_ENABLED) {
+      opts.tls = {};
+    }
+    return opts;
+  }
+
+  return opts;
+}
 
 class RedisService {
   private client: Redis;
 
   constructor() {
-    this.client = new Redis(REDIS_URL, {
-      maxRetriesPerRequest: 3,
-      retryStrategy: (times: number) => {
-        return Math.min(times * 100, 2000);
+    const options = buildOptions();
+
+    if (REDIS_MODE === "live") {
+      this.client = new Redis(options);
+    } else {
+      if (REDIS_URL.startsWith("rediss://")) {
+        options.tls = {};
       }
+      this.client = new Redis(REDIS_URL, options);
+    }
+
+    this.client.on("connect", () => {
+      logger.success("REDIS", `Connected (mode: ${REDIS_MODE})`);
     });
-    // Register lock event handlers (optional)
-    this.client.on('connect', () => {
-      logger.success('REDIS', 'Connected to Redis Cache successfully.');
-    });
-    this.client.on('error', (err: Error) => {
-      logger.warn('REDIS', `Connection event alert: ${err.message}`);
+
+    this.client.on("error", (err: Error) => {
+      logger.warn("REDIS", `Connection event: ${err.message}`);
     });
   }
 
-
-
-  /**
-   * Sets checkout session details in Redis with a 24-hour expiration time (TTL).
-   */
   public async setSession(nonce: string, sessionData: any): Promise<void> {
     try {
       await this.client.set(
@@ -46,9 +75,6 @@ class RedisService {
     }
   }
 
-  /**
-   * Retrieves checkout session details from Redis.
-   */
   public async getSession(nonce: string): Promise<any | null> {
     try {
       const data = await this.client.get(`sok:session:${nonce}`);
@@ -59,9 +85,6 @@ class RedisService {
     }
   }
 
-  /**
-   * Atomically updates a session's status in Redis.
-   */
   public async updateSessionStatus(
     nonce: string,
     status: "PENDING" | "PROCESSING" | "SETTLED" | "EXPIRED",
@@ -69,57 +92,78 @@ class RedisService {
   ): Promise<void> {
     try {
       const session = await this.getSession(nonce);
-      if (session) {
-        const updated = {
-          ...session,
+      if (!session) {
+        logger.warn("REDIS", `Cannot update status for missing session: ${nonce}`);
+        return;
+      }
+
+      const updated = {
+        ...session,
+        status,
+        ...additionalData,
+        updatedAt: new Date().toISOString()
+      };
+
+      // Use optimistic locking via WATCH/MULTI to prevent race conditions
+      const watchedKey = `sok:session:${nonce}`;
+      await this.client.watch(watchedKey);
+      const current = await this.client.get(watchedKey);
+      if (current !== JSON.stringify(session)) {
+        logger.warn("REDIS", `Session ${nonce} was modified by another process; reload and retry`);
+        await this.client.unwatch();
+        return this.updateSessionStatus(nonce, status, additionalData);
+      }
+
+      const multi = this.client.multi();
+      multi.set(watchedKey, JSON.stringify(updated), "EX", SESSION_TTL);
+      multi.publish(
+        `payment:${nonce}`,
+        JSON.stringify({
           status,
-          ...additionalData,
-          updatedAt: new Date().toISOString()
-        };
-        await this.setSession(nonce, updated);
-        // Publish status update for SSE listeners
-        await this.client.publish(
-          `payment:${nonce}`,
-          JSON.stringify({
-            status,
-            walrusBlobId: additionalData?.walrusBlobId ?? updated.walrusBlobId,
-            txDigest: additionalData?.txDigest ?? updated.txDigest,
-            error: additionalData?.error ?? updated.error
-          })
-        );
+          walrusBlobId: additionalData?.walrusBlobId ?? updated.walrusBlobId,
+          txDigest: additionalData?.txDigest ?? updated.txDigest,
+          error: additionalData?.error ?? updated.error
+        })
+      );
+      const results = await multi.exec();
+
+      if (results === null) {
+        logger.warn("REDIS", `Optimistic lock failed for ${nonce}; retrying`);
+        return this.updateSessionStatus(nonce, status, additionalData);
       }
     } catch (err: any) {
       logger.error("REDIS", `Failed to update session status for ${nonce}: ${err.message}`);
     }
   }
 
-  /**
-   * Exposes the underlying ioredis client instance.
-   */
   public getClient(): Redis {
     return this.client;
   }
 
-  /**
-   * Acquire a simple lock using SET NX EX. Returns true if lock was set.
-   */
-  public async acquireLock(key: string, ttlSeconds: number = 30): Promise<boolean> {
-    const result = await this.client.set(key, '1', 'EX', ttlSeconds, 'NX');
-    return result === 'OK';
+  public async acquireLock(key: string, ttlSeconds: number = 30, owner?: string): Promise<string | null> {
+    const lockOwner = owner || crypto.randomUUID();
+    const result = await this.client.set(key, lockOwner, "EX", ttlSeconds, "NX");
+    return result === "OK" ? lockOwner : null;
   }
 
-  /**
-   * Release a lock (delete the key).
-   */
-  public async releaseLock(key: string): Promise<void> {
-    await this.client.del(key);
+  public async releaseLock(key: string, owner: string): Promise<void> {
+    const currentOwner = await this.client.get(key);
+    if (currentOwner === owner) {
+      await this.client.del(key);
+    }
   }
 
-  /**
-   * Disconnects the Redis connection cleanly.
-   */
   public async disconnect(): Promise<void> {
     await this.client.quit();
+  }
+
+  public async healthCheck(): Promise<boolean> {
+    try {
+      const result = await this.client.ping();
+      return result === "PONG";
+    } catch {
+      return false;
+    }
   }
 }
 

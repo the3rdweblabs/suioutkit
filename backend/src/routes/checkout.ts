@@ -513,22 +513,19 @@ router.post("/webhook", validateWebhookAuth, async (req: Request, res: Response)
 
     // 2. Upload proof-of-payment invoice metadata anonymously to Walrus (idempotent) with Redis lock
     const lockKey = `uploadLock:${session.nonce}`;
-    let lockAcquired = false;
+    let lockOwner: string | null = null;
     try {
-      lockAcquired = await redisService.acquireLock(lockKey, 30);
-      if (!lockAcquired) {
+      lockOwner = await redisService.acquireLock(lockKey, 30);
+      if (!lockOwner) {
         console.warn(`Upload lock not acquired for ${session.nonce}; assuming another worker is handling it.`);
-        // If another worker is already handling, reuse any existing blob ID if present
         if (session.walrusBlobId) {
           walrusBlobId = session.walrusBlobId;
         } else {
-          // Wait briefly for the other worker to finish and then fetch from session
           await new Promise(res => setTimeout(res, 2000));
           const refreshed = await redisService.getSession(session.nonce);
           walrusBlobId = refreshed?.walrusBlobId;
         }
       } else {
-        // We own the lock – perform upload (or reuse if already stored)
         if (session.walrusBlobId) {
           walrusBlobId = session.walrusBlobId;
           console.log('Reusing existing Walrus blob ID:', walrusBlobId);
@@ -547,8 +544,8 @@ router.post("/webhook", validateWebhookAuth, async (req: Request, res: Response)
         }
       }
     } finally {
-      if (lockAcquired) {
-        await redisService.releaseLock(lockKey);
+      if (lockOwner) {
+        await redisService.releaseLock(lockKey, lockOwner);
       }
     }
     // 3. Execute settle_fiat PTB on Sui via gRPC operator signer
