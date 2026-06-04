@@ -278,8 +278,8 @@ export class SuiOutKitModal {
         <h2 class="suioutkit-title">OPay Direct</h2>
         <p class="suioutkit-subtitle">Enter your OPay registered phone number</p>
       </div>
-      <div class="sok-panel">
-        <form class="sok-form" id="sok-opay-form">
+      <div class="suioutkit-panel">
+        <form class="sok-form" id="sok-opay-form" style="width: 100%;">
           <input type="tel" class="sok-input" placeholder="e.g. 08012345678" id="sok-phone-input" required />
           <button type="submit" class="sok-btn">Send Prompt</button>
         </form>
@@ -355,12 +355,12 @@ export class SuiOutKitModal {
         <h2 class="suioutkit-title">Global Checkout</h2>
         <p class="suioutkit-subtitle">Secured by Stripe</p>
       </div>
-      <div class="suioutkit-panel" style="gap: 16px; display: flex; flex-direction: column; width: 100%;">
+      <div class="suioutkit-panel">
         <form id="payment-form" style="width: 100%;">
           <div id="payment-element" style="min-height: 200px; margin-bottom: 16px;">
             <div class="sok-spinner" style="margin: 0 auto;"></div>
           </div>
-          <button class="sok-btn" id="submit-stripe-btn" style="background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%); width: 100%;">
+          <button class="sok-btn sok-btn-indigo" id="submit-stripe-btn">
             Pay Now
           </button>
           <div id="payment-message" style="color: #ef4444; font-size: 13px; margin-top: 8px; text-align: center; display: none;"></div>
@@ -426,14 +426,14 @@ export class SuiOutKitModal {
         <h2 class="suioutkit-title">Pay with Sui Wallet</h2>
         <p class="suioutkit-subtitle">Choose SUI payment channel</p>
       </div>
-      <div class="suioutkit-panel" style="gap: 12px; display: flex; flex-direction: column; width: 100%;">
+      <div class="suioutkit-panel">
         <p class="sok-status-text" style="margin-bottom: 12px;">
           Choose whether to pay via a desktop extension wallet or scan a dynamic QR Code with your mobile wallet.
         </p>
-        <button class="sok-btn" id="sok-connect-extension-btn" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); margin-bottom: 4px;">
+        <button class="sok-btn sok-btn-blue" id="sok-connect-extension-btn" style="margin-bottom: 4px;">
           Standard Connect Wallet
         </button>
-        <button class="sok-btn" id="sok-outpay-qr-btn" style="background: linear-gradient(135deg, #10b981 0%, #047857 100%);">
+        <button class="sok-btn sok-btn-green" id="sok-outpay-qr-btn">
           outPay (Scan QR Code)
         </button>
       </div>
@@ -518,10 +518,10 @@ export class SuiOutKitModal {
         <h2 class="suioutkit-title">Connect Wallet</h2>
         <p class="suioutkit-subtitle">Choose the extension you want to use</p>
       </div>
-      <div style="display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%;">
+      <div class="suioutkit-wallet-list">
         ${walletCardsHtml}
       </div>
-      <p class="sok-status-text" style="font-size: 12px; opacity: 0.75; margin-top: 14px; text-align: center;">
+      <p class="sok-status-text sok-text-sm sok-op-75" style="margin-top: 14px; text-align: center;">
         Wallets are filtered from the browser extensions detected by dApp Kit.
       </p>
     `;
@@ -599,15 +599,15 @@ export class SuiOutKitModal {
 
     container.innerHTML = `
       <button class="suioutkit-back" id="sok-back-btn">← Back to Sui options</button>
-      <div class="suioutkit-panel" style="gap: 12px; display: flex; flex-direction: column; align-items: center; text-align: center;">
-        <div class="sok-success-icon" style="color: #f59e0b; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+      <div class="suioutkit-panel">
+        <div class="sok-icon-wrap sok-text-amber">
           <i data-lucide="alert-circle" style="width: 48px; height: 48px;"></i>
         </div>
         <h2 class="sok-success-title">Open this demo from localhost</h2>
         <p class="sok-status-text" style="max-width: 320px;">
           This page is running from a local file URL. Browser extension wallets like Slush and Phantom do not reliably inject into file:// pages, so dApp Kit cannot list them here.
         </p>
-        <p class="sok-status-text" style="max-width: 320px; font-size: 12px; opacity: 0.78;">
+        <p class="sok-status-text sok-text-sm sok-op-75" style="max-width: 320px;">
           Open the demo over http://localhost or another web server, then reload. That is the supported origin for wallet detection and connection.
         </p>
       </div>
@@ -625,14 +625,13 @@ export class SuiOutKitModal {
       <button
         class="sok-wallet-card"
         data-wallet-index="${index}"
-        style="display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.08); background: linear-gradient(135deg, rgba(17,24,39,0.88), rgba(15,23,42,0.96)); color: #fff; text-align: left; box-shadow: 0 18px 40px rgba(0,0,0,0.22);"
       >
-        <img src="${icon}" alt="${walletName}" class="sok-wallet-icon" style="width: 44px; height: 44px; border-radius: 14px; flex: none; background: rgba(255,255,255,0.08); padding: 4px;" />
-        <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0;">
-          <span class="sok-wallet-name" style="font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${walletName}</span>
-          <span style="font-size: 12px; opacity: 0.74;">Detected browser wallet</span>
+        <img src="${icon}" alt="${walletName}" class="sok-wallet-icon" />
+        <span class="sok-wallet-info">
+          <span class="sok-wallet-name">${walletName}</span>
+          <span class="sok-wallet-desc">Detected browser wallet</span>
         </span>
-        <span style="font-size: 12px; font-weight: 700; color: #93c5fd;">Connect</span>
+        <span class="sok-wallet-connect">Connect</span>
       </button>
     `;
   }
@@ -644,14 +643,14 @@ export class SuiOutKitModal {
     container.innerHTML = `
       <button class="suioutkit-back" id="sok-back-btn">← Back to Sui options</button>
       <div class="suioutkit-panel">
-        <div class="sok-success-icon" style="color: #f59e0b; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+        <div class="sok-icon-wrap sok-text-amber">
           <i data-lucide="alert-circle" style="width: 48px; height: 48px;"></i>
         </div>
         <h2 class="sok-success-title">No Wallets Detected</h2>
-        <p class="sok-status-text" style="margin-top: 16px;">
+        <p class="sok-status-text sok-mt-16">
           We couldn't find any installed Sui wallets. Please install a wallet extension like Phantom, Slush, or others from the app store and refresh the page.
         </p>
-        <p class="sok-status-text" style="font-size: 12px; opacity: 0.7; margin-top: 12px;">
+        <p class="sok-status-text sok-text-sm sok-op-75 sok-mt-12">
           Alternatively, you can use the outPay QR option to pay from a mobile wallet.
         </p>
       </div>
@@ -677,7 +676,7 @@ export class SuiOutKitModal {
         <h2 class="suioutkit-title">Confirm Payment</h2>
         <p class="suioutkit-subtitle">Review and approve this transaction</p>
       </div>
-      <div class="suioutkit-panel" style="gap: 12px; display: flex; flex-direction: column; width: 100%;">
+      <div class="suioutkit-panel">
         <div class="sok-va-card">
           <div class="sok-va-row">
             <div class="sok-va-lbl">Amount</div>
@@ -692,7 +691,7 @@ export class SuiOutKitModal {
             <div class="sok-va-val">${network}</div>
           </div>
         </div>
-        <button class="sok-btn" id="sok-confirm-pay-btn" style="background: linear-gradient(135deg, #10b981 0%, #047857 100%);">
+        <button class="sok-btn sok-btn-green" id="sok-confirm-pay-btn">
           Confirm & Pay
         </button>
       </div>
@@ -902,7 +901,7 @@ export class SuiOutKitModal {
     container.innerHTML = `
       <button class="suioutkit-back" id="sok-back-btn">← Back to methods</button>
       <div class="suioutkit-panel">
-        <div class="sok-success-icon" style="color: #10b981; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+        <div class="sok-icon-wrap sok-text-green">
           <i data-lucide="check-circle" style="width: 48px; height: 48px;"></i>
         </div>
         <h2 class="sok-success-title">Payment Successful!</h2>
@@ -911,7 +910,7 @@ export class SuiOutKitModal {
         <div class="sok-success-details">
           <div class="sok-receipt-row">
             <span class="sok-receipt-lbl">Amount Paid</span>
-            <span class="sok-receipt-val" style="color: #10b981; font-weight:700;">
+            <span class="sok-receipt-val sok-text-green" style="font-weight:700;">
               ${this.session.currency === "NGN" ? "₦" : ""}${this.session.amount.toLocaleString()}
             </span>
           </div>
@@ -952,11 +951,11 @@ export class SuiOutKitModal {
     container.innerHTML = `
       <button class="suioutkit-back" id="sok-back-btn">← Back to methods</button>
       <div class="suioutkit-panel">
-        <div class="sok-success-icon" style="color: #ef4444; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+        <div class="sok-icon-wrap sok-text-red">
           <i data-lucide="x-circle" style="width: 48px; height: 48px;"></i>
         </div>
         <h2 class="sok-success-title">Payment Failed</h2>
-        <p class="sok-status-text" style="color: #ef4444; margin-bottom: 20px;">${message}</p>
+        <p class="sok-status-text sok-mb-20 sok-text-red">${message}</p>
       </div>
     `;
 
