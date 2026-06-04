@@ -80,7 +80,7 @@ import { SuiOutKit } from "suioutkit";
 Methods:
 
 - `initCheckout(options)` - creates a session
-- `openModal(session, onClose?)` - opens the checkout UI
+- `openModal(session, options?)` - opens the checkout UI (accepts `SuiOutKitModalOptions` with `onClose`, `onPaymentComplete`, `redirectUrl`, `autoCloseOnSuccess`)
 - `wrapButton(selector, options)` - binds checkout to a button
 
 ### Helper Exports
@@ -132,7 +132,10 @@ Performs a treasury pre-flight check using the current rate before the user proc
 The backend uses the following variables from [`backend/.env`](/backend/.env):
 
 - `PORT`
-- `REDIS_URL`
+- `REDIS_MODE` - `local` (standalone Redis) or `live` (Upstash/REST)
+- `REDIS_URL` - connection string (used in `local` mode)
+- `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_TLS_ENABLED` - Redis config for `local` mode
+- `SESSION_TTL` - checkout session expiry in seconds
 - `FLW_API_BASE`
 - `FLW_PUBLIC_KEY`
 - `FLW_SECRET_KEY`
@@ -145,9 +148,9 @@ The backend uses the following variables from [`backend/.env`](/backend/.env):
 - `WALRUS_UPLOAD_RELAY_MAX_TIP`
 - `WALRUS_PUBLISHER_URL`
 - `SUI_RPC_ENDPOINT`
-- `SUI_GRPC_ENDPOINT`
 - `SUI_NETWORK`
 - `PACKAGE_ID`
+- `PAYMENT_KIT_PACKAGE_ID_testnet` / `PAYMENT_KIT_PACKAGE_ID_mainnet` - Payment Kit registry package (outPay flow)
 - `TREASURY_ID`
 - `FIAT_REGISTRY_ID`
 - `FIAT_REGISTRY_ADMIN_CAP_ID`

@@ -123,16 +123,28 @@ Throws if the backend returns a non-OK response.
 
 ---
 
-### `openModal(session, onClose?)`
+### `openModal(session, options?)`
 Opens the built-in checkout modal (bank transfer, OPay, Stripe, Sui wallet, outPay).
 
 ```ts
-const modal = sdk.openModal(session, () => {
-  // Called when the user closes the overlay
+const modal = sdk.openModal(session, {
+  onClose: () => console.log("closed"),
+  onPaymentComplete: (result) => console.log(result.txDigest, result.walrusBlobId),
+  redirectUrl: "/thank-you",
+  autoCloseOnSuccess: true,
 });
 ```
 
 **Returns** `SuiOutKitModal` (internal handle). The modal loads styles from `{backendUrl}/style.css` automatically.
+
+Options (`SuiOutKitModalOptions`):
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `onClose` | `() => void` | Called when the user dismisses the overlay |
+| `onPaymentComplete` | `(result: PaymentResult) => void` | Called after on-chain settlement with `{ nonce, txDigest, walrusBlobId }` |
+| `redirectUrl` | `string` | Redirect browser here after successful payment |
+| `autoCloseOnSuccess` | `boolean` | Auto-close the modal after settlement instead of showing success panel |
 
 > **Note:** Theme, logo, and `allowedMethods` customization are not exposed on `openModal` today. Use [custom UI](#custom-ui-no-modal) or extend the modal in source if you need that.
 

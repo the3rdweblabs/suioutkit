@@ -36,9 +36,27 @@ const session = await sdk.initCheckout({
 
 Returns `CheckoutSession` with `token`, `nonce`, `coinType`, `estimatedRate`, etc.
 
-### `openModal(session, onClose?)`
+### `openModal(session, options?)`
 
 Opens the built-in modal (bank transfer, OPay, Stripe, Sui wallet, outPay). Loads styles from `{backendUrl}/style.css`.
+
+```ts
+const modal = sdk.openModal(session, {
+  onClose: () => console.log("Modal closed"),
+  onPaymentComplete: (result) => console.log("Paid", result.txDigest),
+  redirectUrl: "/thank-you",
+  autoCloseOnSuccess: true,
+});
+```
+
+Options (`SuiOutKitModalOptions`):
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `onClose` | `() => void` | Fired when the user dismisses the overlay |
+| `onPaymentComplete` | `(result: PaymentResult) => void` | Fired after on-chain settlement with `{ nonce, txDigest, walrusBlobId }` |
+| `redirectUrl` | `string` | Redirect the browser here after successful payment |
+| `autoCloseOnSuccess` | `boolean` | Auto-close the modal after settlement instead of showing success panel |
 
 ### `wrapButton(selector, options)`
 

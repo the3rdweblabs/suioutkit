@@ -12,7 +12,12 @@ Configure these values in `backend/.env` (see [`backend/.env.example`](/backend/
 | Variable | Description |
 |----------|-------------|
 | `PORT` | HTTP port (default `5000`) |
-| `REDIS_URL` | Redis connection string |
+| `REDIS_MODE` | `local` (standalone Redis via `ioredis`) or `live` (Upstash REST) |
+| `REDIS_URL` | Redis connection string (used when `REDIS_MODE=local`) |
+| `REDIS_HOST`, `REDIS_PORT` | Redis host/port override (optional, default `localhost:6379`) |
+| `REDIS_PASSWORD` | Redis password / Upstash token |
+| `REDIS_TLS_ENABLED` | Set `true` to enable TLS (Upstash) |
+| `SESSION_TTL` | Checkout session expiry in seconds (default `1800`) |
 
 ### Minimum for local development
 
@@ -20,6 +25,7 @@ For a quick local run you typically need at least:
 
 ```text
 PORT=5000
+REDIS_MODE=local
 REDIS_URL=redis://localhost:6379
 SETTLEMENT_TOKEN_TYPE=0x2::sui::SUI
 SUI_NETWORK=testnet
@@ -48,10 +54,10 @@ Notes:
 
 | Variable | Description |
 |----------|-------------|
-| `SUI_RPC_ENDPOINT` | JSON-RPC endpoint |
-| `SUI_GRPC_ENDPOINT` | gRPC endpoint |
+| `SUI_RPC_ENDPOINT` | JSON-RPC endpoint (used by indexer for `suix_queryEvents` polling) |
 | `SUI_NETWORK` | `testnet` or `mainnet` |
-| `PACKAGE_ID` | Published Move package |
+| `PACKAGE_ID` | Published suioutkit Move package |
+| `PAYMENT_KIT_PACKAGE_ID_testnet` / `PAYMENT_KIT_PACKAGE_ID_mainnet` | Payment Kit registry package (required for outPay flow) |
 | `TREASURY_ID` | Treasury shared object |
 | `FIAT_REGISTRY_ID` | Payment Kit registry (fiat) |
 | `FIAT_REGISTRY_ADMIN_CAP_ID` | Registry admin cap |
