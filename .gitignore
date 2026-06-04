@@ -45,3 +45,6 @@ coverage/
 # Demo/test outputs
 demo-output/
 test-results/
+
+.agents/
+skills-lock.json

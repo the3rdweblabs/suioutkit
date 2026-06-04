@@ -203,6 +203,7 @@ Author: @CYBWithFlourish (https://github.com/CYBWithFlourish)
         });
         statusEl.textContent = `Session created: ${session.nonce}\nOpening modal...`;
         sdk.openModal(session, {
+          autoCloseOnSuccess: true,
           onClose: () => {
             checkoutBtn.disabled = false;
             statusEl.textContent = `Modal closed. Session nonce: ${session.nonce}`;
