@@ -2,7 +2,7 @@
 // Copyright (c) 2026 The3rdWebLabs (https://github.com/the3rdweblabs)
 // Author: @CYBWithFlourish (https://github.com/CYBWithFlourish)
 
-import { CheckoutSession, CheckoutSessionOptions, CryptoConfirmResponse } from "./types/index.js";
+import { CheckoutSession, CheckoutSessionOptions, CryptoConfirmResponse, SuiOutKitModalOptions } from "./types/index.js";
 import { SuiOutKitModal } from "./components/modal.js";
 import { DEFAULT_API_ORIGIN, joinApiPath } from "./config/api.js";
 
@@ -51,10 +51,8 @@ export class SuiOutKit {
   /**
    * Spawns the interactive RainbowKit-style checkout modal.
    */
-  public openModal(session: CheckoutSession, onClose?: () => void): SuiOutKitModal {
-    return new SuiOutKitModal(session, this.backendUrl, () => {
-      if (onClose) onClose();
-    });
+  public openModal(session: CheckoutSession, options?: SuiOutKitModalOptions): SuiOutKitModal {
+    return new SuiOutKitModal(session, this.backendUrl, options);
   }
 
   /**
@@ -116,11 +114,12 @@ export class SuiOutKit {
 
       try {
         const session = await this.initCheckout(options);
-        this.openModal(session, () => {
-          // Restore button when modal is closed
-          btn.disabled = false;
-          btn.textContent = `Pay ${formattedAmount}`;
-          btn.style.opacity = "1";
+        this.openModal(session, {
+          onClose: () => {
+            btn.disabled = false;
+            btn.textContent = `Pay ${formattedAmount}`;
+            btn.style.opacity = "1";
+          },
         });
       } catch (err) {
         alert("SuiOutKit Error: Unable to open secure payment session.");

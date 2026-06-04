@@ -22,6 +22,7 @@ const CRYPTO_REGISTRY_ID = getEnv("CRYPTO_REGISTRY_ID");
 const CRYPTO_REGISTRY_ADMIN_CAP_ID = getEnv("CRYPTO_REGISTRY_ADMIN_CAP_ID");
 const SUI_OPERATOR_PRIVATE_KEY = getEnv("SUI_OPERATOR_PRIVATE_KEY");
 const SUI_NETWORK = getEnv("SUI_NETWORK", "testnet") as any;
+const PAYMENT_KIT_PACKAGE_ID = getEnv(`PAYMENT_KIT_PACKAGE_ID_${SUI_NETWORK}`);
 
 class SuiIntegrationService {
   private client: SuiGrpcClient;
@@ -386,53 +387,97 @@ class SuiIntegrationService {
       throw new Error("Sui Indexer: PACKAGE_ID is missing from environment variables.");
     }
 
-    console.log(`SuiOutKit Indexer: Subscribing to live events on package ${PACKAGE_ID}...`);
+    console.log(`SuiOutKit Indexer: Polling events for settled payments via RPC...`);
 
-    // In a production backend, we use websocket client to listen for events:
-    try {
-      const clientAny = this.client as any;
+    const pollEvents = (eventFilter: object, label: string) => {
+      let cursor: { txDigest: string; eventSeq: string } | null = null;
 
-      if (typeof clientAny.subscribeEvent === "function") {
-        clientAny.subscribeEvent({
-          filter: { Package: PACKAGE_ID },
-          onMessage: (event: any) => {
-            console.log("SuiOutKit Indexer: Caught on-chain event:", event);
-            onEventReceived(event);
+      // Init: fetch the latest event to establish a starting cursor, so old
+      // events before this point are never emitted. The cursor event itself
+      // WILL be emitted on the first data tick (it's the latest and may be new).
+      (async () => {
+        try {
+          const initRes = await fetch(SUI_RPC_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              id: 1,
+              method: "suix_queryEvents",
+              params: [eventFilter, null, 1, true],
+            }),
+          });
+          const initData: any = await initRes.json();
+          if (initData.result?.data?.[0]) {
+            const evt = initData.result.data[0];
+            cursor = {
+              txDigest: evt.id?.txDigest || "",
+              eventSeq: evt.id?.eventSeq || "",
+            };
           }
-        });
-        return;
-      }
+        } catch (_) {
+          // init failure is non-fatal — first data tick will have cursor=null
+        }
+      })();
 
-      if (typeof clientAny.subscribeEvents === "function") {
-        // some client versions expose `subscribeEvents`
-        clientAny.subscribeEvents({
-          filter: { Package: PACKAGE_ID },
-          onMessage: (event: any) => {
-            console.log("SuiOutKit Indexer: Caught on-chain event:", event);
-            onEventReceived(event);
+      setInterval(async () => {
+        try {
+          const response = await fetch(SUI_RPC_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              id: 1,
+              method: "suix_queryEvents",
+              params: [eventFilter, null, 50, true],
+            }),
+          });
+
+          const data: any = await response.json();
+          if (data.error || !data.result) {
+            console.warn(`SuiOutKit Indexer (${label}) RPC Error:`, data.error?.message || "No result");
+            return;
           }
-        });
-        return;
-      }
 
-      console.error("Sui Indexer subscription not supported by client, falling back to polling indexer");
-    } catch (err: any) {
-      console.error("Sui Indexer subscription failure, falling back to polling indexer:", err.message);
+          for (const evt of (data.result.data || []).reverse()) {
+            const txDigest = evt.id?.txDigest || "";
+            const eventSeq = evt.id?.eventSeq || "";
+
+            // Skip events at or before the init cursor (already seen)
+            if (cursor && txDigest && eventSeq) {
+              const isBefore =
+                txDigest === cursor.txDigest
+                  ? eventSeq <= cursor.eventSeq
+                  : false;
+              if (isBefore) continue;
+            }
+
+            onEventReceived(evt);
+
+            // Track the most recent event we've seen
+            if (txDigest && eventSeq) {
+              cursor = { txDigest, eventSeq };
+            }
+          }
+        } catch (e: any) {
+          console.warn(`SuiOutKit Indexer (${label}) Polling Error:`, e?.message || e);
+        }
+      }, 3000);
+    };
+
+    // Listen for PaymentSettled from suioutkit (sui_wallet flow calls mint_suioutkit_receipt)
+    pollEvents(
+      { MoveEventType: `${PACKAGE_ID}::events::PaymentSettled` },
+      "PaymentSettled"
+    );
+
+    // Listen for PaymentReceipt from Payment Kit (outPay flow only calls processRegistryPayment)
+    if (PAYMENT_KIT_PACKAGE_ID) {
+      pollEvents(
+        { MoveEventType: `${PAYMENT_KIT_PACKAGE_ID}::payment_kit::PaymentReceipt` },
+        "PaymentReceipt"
+      );
     }
-
-    // Fallback polling indexer (querying events every 5 seconds)
-    setInterval(async () => {
-      try {
-        const events = await (this.client as any).queryEvents({
-          query: { Package: PACKAGE_ID },
-          limit: 10,
-          order: "descending"
-        });
-        events.data.forEach((evt: any) => onEventReceived(evt));
-      } catch (e: any) {
-        // Suppress connection logs in polling
-      }
-    }, 5000);
   }
 
 

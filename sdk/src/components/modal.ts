@@ -10,8 +10,9 @@ import { createPaymentTransactionUri } from "@mysten/payment-kit";
 import { paymentKit } from "@mysten/payment-kit";
 import { createDAppKit } from "@mysten/dapp-kit-core";
 import "@mysten/dapp-kit-core/web";
+import QRCode from "qrcode";
 import { loadStripe, StripeElements, Stripe } from "@stripe/stripe-js";
-import { CheckoutSession, ChargeResponse, CheckoutStatusResponse, CryptoIntentResponse } from "../types/index.js";
+import { CheckoutSession, ChargeResponse, CheckoutStatusResponse, CryptoIntentResponse, SuiOutKitModalOptions, PaymentResult } from "../types/index.js";
 import PaymentStatusUI from "./PaymentStatusUI";
 import { joinApiPath } from "../config/api.js";
 
@@ -33,17 +34,23 @@ export class SuiOutKitModal {
   private backendUrl: string;
   private pollInterval: any = null;
   private walletConnectionUnsubscribe: (() => void) | null = null;
-  private onCloseCallback: () => void;
+  private onCloseCallback?: () => void;
+  private onPaymentCompleteCallback?: (result: PaymentResult) => void;
+  private redirectUrl?: string;
+  private autoCloseOnSuccess?: boolean;
   private cryptoIntent: CryptoIntentResponse | null = null;
   private dAppKit: any | null = null;
   private paymentClient: any | null = null;
   private stripeInstance: Stripe | null = null;
   private stripeElements: StripeElements | null = null;
 
-  constructor(session: CheckoutSession, backendUrl: string, onClose: () => void) {
+  constructor(session: CheckoutSession, backendUrl: string, options?: SuiOutKitModalOptions) {
     this.session = session;
     this.backendUrl = backendUrl;
-    this.onCloseCallback = onClose;
+    this.onCloseCallback = options?.onClose;
+    this.onPaymentCompleteCallback = options?.onPaymentComplete;
+    this.redirectUrl = options?.redirectUrl;
+    this.autoCloseOnSuccess = options?.autoCloseOnSuccess;
     this.ensureDAppKit(); // Initialize early so wallets have time to inject
     this.injectStyles();
     this.createModal();
@@ -413,15 +420,6 @@ export class SuiOutKitModal {
     const container = this.overlay?.querySelector("#sok-content-panel");
     if (!container) return;
 
-    this.renderLoadingPanel("Preparing crypto payment...");
-
-    try {
-      this.cryptoIntent = await this.loadCryptoIntent("sui_wallet");
-    } catch (err: any) {
-      this.renderErrorPanel(err.message || "Failed to prepare crypto payment.");
-      return;
-    }
-
     container.innerHTML = `
       <button class="suioutkit-back" id="sok-back-btn">← Back to methods</button>
       <div class="suioutkit-header">
@@ -443,9 +441,12 @@ export class SuiOutKitModal {
 
     container.querySelector("#sok-back-btn")?.addEventListener("click", () => this.renderSelectionPanel());
 
-    container.querySelector("#sok-connect-extension-btn")?.addEventListener("click", () => {
-      if (!this.cryptoIntent) {
-        this.renderErrorPanel("Crypto intent not ready.");
+    container.querySelector("#sok-connect-extension-btn")?.addEventListener("click", async () => {
+      this.renderLoadingPanel("Preparing crypto payment...");
+      try {
+        this.cryptoIntent = await this.loadCryptoIntent("sui_wallet");
+      } catch (err: any) {
+        this.renderErrorPanel(err.message || "Failed to prepare crypto payment.");
         return;
       }
       void this.openStandardConnectWallet();
@@ -809,7 +810,7 @@ export class SuiOutKitModal {
     }
 
     const paymentUri = this.buildPaymentUri(this.cryptoIntent);
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(paymentUri)}`;
+    const qrCodeUrl = await QRCode.toDataURL(paymentUri, { width: 180, margin: 1 });
 
     container.innerHTML = `
       <button class="suioutkit-back" id="sok-back-btn">← Back to Sui options</button>
@@ -823,7 +824,7 @@ export class SuiOutKitModal {
           <div class="sok-qr-frame">
             <img src="${qrCodeUrl}" alt="outPay QR Code" class="sok-qr-img" />
             <div class="sok-qr-logo-badge">
-              <i data-lucide="droplet" style="width: 16px; height: 16px; color: white;"></i>
+              <img src="${this.backendUrl}/assets/slush.jpeg" alt="Slush" style="width: 35px; height: 35px; border-radius: 16px;" />
             </div>
             <div class="sok-qr-scan-pulse"></div>
           </div>
@@ -899,6 +900,7 @@ export class SuiOutKitModal {
     const walrusNetworkPath = getExplorerNetworkPath();
 
     container.innerHTML = `
+      <button class="suioutkit-back" id="sok-back-btn">← Back to methods</button>
       <div class="suioutkit-panel">
         <div class="sok-success-icon" style="color: #10b981; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
           <i data-lucide="check-circle" style="width: 48px; height: 48px;"></i>
@@ -932,6 +934,15 @@ export class SuiOutKitModal {
     `;
 
     this.renderIcons();
+    container.querySelector("#sok-back-btn")?.addEventListener("click", () => this.renderSelectionPanel());
+
+    const result: PaymentResult = { nonce: this.session.nonce, txDigest, walrusBlobId };
+    this.onPaymentCompleteCallback?.(result);
+    if (this.redirectUrl) {
+      window.location.href = this.redirectUrl;
+    } else if (this.autoCloseOnSuccess) {
+      this.destroy();
+    }
   }
 
   private renderErrorPanel(message: string) {
@@ -986,7 +997,7 @@ export class SuiOutKitModal {
     this.overlay?.classList.remove("active");
     setTimeout(() => {
       this.overlay?.remove();
-      this.onCloseCallback();
+      this.onCloseCallback?.();
     }, 300);
   }
 }

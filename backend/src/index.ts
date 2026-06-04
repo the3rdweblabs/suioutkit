@@ -12,6 +12,8 @@ import checkoutRouter from "./routes/checkout.js";
 import suiService from "./services/sui.js";
 import paymentsRouter from "./routes/payments.js";
 import redisService from "./services/redis.js";
+import walrusService from "./services/walrus.js";
+import logger from "./utils/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -70,10 +72,69 @@ app.get("/health", (req, res) => {
 app.use("/v1/checkout", checkoutRouter);
 app.use("/v1/payments", paymentsRouter);
 
+interface IndexerEvent {
+  transactionDigest?: string;
+  event?: {
+    id?: { txDigest?: string };
+    parsedJson?: any;
+    type?: string;
+  };
+  id?: { txDigest?: string };
+  parsedJson?: any;
+  type?: string;
+}
+
+function extractTxDigest(event: IndexerEvent): string | null {
+  return (
+    event.transactionDigest ||
+    event.event?.id?.txDigest ||
+    event.id?.txDigest ||
+    null
+  );
+}
+
+function extractParsedJson(event: IndexerEvent): any {
+  return event.event?.parsedJson || event.parsedJson || null;
+}
+
+function extractEventType(event: IndexerEvent): string {
+  return event.event?.type || event.type || "";
+}
+
 // Start high-speed Sui background indexer stream
-suiService.startIndexer((event) => {
-  console.log("SuiOutKit Core Indexer: Captured on-chain payment registration:", event);
-  // We can process direct crypto payment settlements or dynamic triggers here
+suiService.startIndexer(async (event) => {
+  const txDigest = extractTxDigest(event);
+  const parsedJson = extractParsedJson(event);
+  const eventType = extractEventType(event);
+  const nonce = parsedJson?.nonce || parsedJson?.nonce_str || parsedJson?.nonceString;
+
+  if (!nonce || !txDigest) return; // Not a payment event or missing data
+
+  try {
+    const session = await redisService.getSession(nonce);
+    if (!session) return;
+
+    const isCryptoPayment = session.cryptoAmountBaseUnits || session.cryptoWalrusInvoice;
+    if (!isCryptoPayment || session.status === "SETTLED") return;
+
+    logger.info("INDEXER", `Auto-settling crypto payment for nonce ${nonce}`);
+
+    let walrusBlobId = session.cryptoWalrusBlobId || session.walrusBlobId;
+    if (!walrusBlobId && session.cryptoWalrusInvoice) {
+      walrusBlobId = await walrusService.uploadInvoice(session.cryptoWalrusInvoice);
+    }
+
+    await redisService.updateSessionStatus(nonce, "SETTLED", {
+      txDigest,
+      walrusBlobId,
+      cryptoWalrusUploadedAt: new Date().toISOString(),
+      cryptoConfirmedAt: new Date().toISOString(),
+    });
+
+    logger.success("INDEXER", `Crypto payment ${nonce} settled on-chain: ${txDigest}`);
+  } catch (err: any) {
+    logger.error("INDEXER", `Failed to settle crypto payment ${nonce}: ${err.message}`);
+  }
 });
 
 // Launch server

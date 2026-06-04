@@ -67,3 +67,16 @@ export interface CheckoutStatusResponse {
   walrusBlobId?: string;
   error?: string;
 }
+
+export interface PaymentResult {
+  nonce: string;
+  txDigest: string;
+  walrusBlobId: string;
+}
+
+export interface SuiOutKitModalOptions {
+  onClose?: () => void;
+  onPaymentComplete?: (result: PaymentResult) => void;
+  redirectUrl?: string;
+  autoCloseOnSuccess?: boolean;
+}

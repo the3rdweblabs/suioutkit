@@ -202,9 +202,31 @@ Author: @CYBWithFlourish (https://github.com/CYBWithFlourish)
           metadata: { source: "demo.html", createdAt: new Date().toISOString() }
         });
         statusEl.textContent = `Session created: ${session.nonce}\nOpening modal...`;
-        sdk.openModal(session, () => {
-          checkoutBtn.disabled = false;
-          statusEl.textContent = `Modal closed. Session nonce: ${session.nonce}`;
+        sdk.openModal(session, {
+          onClose: () => {
+            checkoutBtn.disabled = false;
+            statusEl.textContent = `Modal closed. Session nonce: ${session.nonce}`;
+          },
+          onPaymentComplete: ({ txDigest, walrusBlobId }) => {
+            statusEl.textContent = "";
+            const card = document.querySelector(".card");
+            if (!card) return;
+            card.innerHTML = `
+              <span class="badge">Payment Complete</span>
+              <h1>Thank You!</h1>
+              <p>Your payment of <strong>₦1,000</strong> has been confirmed on-chain.</p>
+              <div class="status ok" style="margin-top:16px;">
+                Tx Digest: ${txDigest}<br>
+                Walrus Blob ID: ${walrusBlobId}
+              </div>
+              <div class="row">
+                <button id="pay-again-btn" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;box-shadow:0 10px 25px rgba(99,102,241,0.35);">
+                  Pay Again
+                </button>
+              </div>
+            `;
+            card.querySelector("#pay-again-btn")?.addEventListener("click", () => location.reload());
+          },
         });
       } catch (err) {
         checkoutBtn.disabled = false;
