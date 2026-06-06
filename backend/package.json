@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Express Settle & Index Service for SuiOutKit",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=26.3.0"
+  },
   "type": "module",
   "scripts": {
      "build": "tsc -p tsconfig.json",
