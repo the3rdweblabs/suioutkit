@@ -4,10 +4,17 @@
 
 export type SomeType = any;
 
+export interface SupportedCoin {
+  symbol: string;
+  type: string;
+  decimals: number;
+}
+
 export interface CheckoutSessionOptions {
   amount: number;
   currency: "NGN" | "SUI" | string;
   merchantAddress: string;
+  coinType?: string;
   metadata?: Record<string, any>;
 }
 
@@ -23,6 +30,7 @@ export interface CheckoutSession {
   cryptoRegistryName?: string;
   coinType?: string;
   estimatedRate?: number;
+  supportedCoins?: SupportedCoin[];
 }
 
 export type ChargeMethod = "bank_transfer" | "opay" | "crypto" | "sui_wallet" | "outpay" | "stripe";

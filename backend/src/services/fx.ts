@@ -3,6 +3,7 @@
 // Author: @CYBWithFlourish (https://github.com/CYBWithFlourish)
 
 import fetch from "node-fetch";
+import { getCoinConfig } from "../config/coins.js";
 
 class FXService {
   private coinPriceCache: Record<string, { price: number; timestamp: number }> = {};
@@ -11,19 +12,13 @@ class FXService {
 
   /**
    * Fetches the real-time USD price of a coin from CoinGecko.
-   * @param coinType - The coin type to fetch price for
+   * @param coinType - The coin type string or symbol to fetch price for
    * @param skipCache - Force fresh fetch, ignore cache
    */
   public async getCoinPriceInUSD(coinType: string, skipCache: boolean = false): Promise<number> {
-    const cleanType = coinType.toLowerCase();
-
-    // Map standard token types to CoinGecko IDs
-    let coinId = "sui";
-    if (cleanType.includes("usdc")) {
-      coinId = "usd-coin";
-    } else if (cleanType.includes("usdt")) {
-      coinId = "tether";
-    }
+    const cfg = getCoinConfig(coinType);
+    const coinId = cfg?.coingeckoId || "sui";
+    const defaultPrice = cfg?.coingeckoId ? 1.0 : 1.5;
 
     const cached = this.coinPriceCache[coinId];
     if (!skipCache && cached && Date.now() - cached.timestamp < this.CACHE_DURATION_MS) {
@@ -40,10 +35,10 @@ class FXService {
         console.log(`[FX SERVICE]: Fetched dynamic price for ${coinId}: $${price}`);
         return price;
       }
-      return coinId === "sui" ? 1.5 : 1.0; // Fail-safe fallbacks
+      return defaultPrice;
     } catch (err: any) {
       console.warn(`[FX SERVICE WARNING]: Failed to fetch CoinGecko price for ${coinId}, using default:`, err.message);
-      return coinId === "sui" ? 1.5 : 1.0;
+      return defaultPrice;
     }
   }
 

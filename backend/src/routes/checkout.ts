@@ -17,12 +17,12 @@ import { rateLimiter } from "../middleware/rateLimiter.js";
 import { validateWebhookAuth } from "../middleware/webhookAuth.js";
 import { CheckoutSession } from "../types/checkout.js";
 import { assertTreasurySufficient } from "../utils/treasuryCheck.js";
+import { getDefaultCoin, getCoinConfig, getSupportedCoinList, toBaseUnits, fromBaseUnits, getDecimals } from "../config/coins.js";
 
 const router = Router();
 
 // Load FX and Webhook configurations
 const PACKAGE_ID = getEnv("PACKAGE_ID");
-const SETTLEMENT_TOKEN_TYPE = getEnv("SETTLEMENT_TOKEN_TYPE", "0x2::sui::SUI");
 const CRYPTO_REGISTRY_ID = getEnv("CRYPTO_REGISTRY_ID");
 const CRYPTO_REGISTRY_NAME = getEnv("CRYPTO_REGISTRY_NAME", "suioutkit-crypto-settlements");
 
@@ -48,7 +48,18 @@ router.post("/session", rateLimiter, async (req: Request, res: Response) => {
   try {
     const nonce = crypto.randomUUID();
     const token = crypto.randomBytes(32).toString("hex");
-    const targetCoinType = coinType || SETTLEMENT_TOKEN_TYPE;
+
+    // Resolve coinType — validate against supported list
+    const defaultCoin = getDefaultCoin();
+    const requestedCoin = coinType || defaultCoin.type;
+    const coinCfg = getCoinConfig(requestedCoin);
+    if (!coinCfg) {
+      const supported = getSupportedCoinList().map((c) => c.type).join(", ");
+      return res.status(400).json({
+        error: `Unsupported coin type: ${requestedCoin}. Supported: ${supported}`,
+      });
+    }
+    const targetCoinType = coinCfg.type;
     const normalizedMerchantAddress = normalizeMerchantAddress(merchantAddress);
 
     // Calculate real-time dynamic exchange rate for checkout preview
@@ -81,7 +92,7 @@ router.post("/session", rateLimiter, async (req: Request, res: Response) => {
     await redisService.setSession(`token:${token}`, { nonce });
 
     logger.info("CHECKOUT", `Created checkout session. Nonce: ${nonce}, Amount: ${currency} ${amount}`);
-    return res.json(session);
+    return res.json({ ...session, supportedCoins: getSupportedCoinList() });
   } catch (err: any) {
     logger.error("CHECKOUT", `Session creation failed: ${err.message}`);
     return res.status(400).json({ error: err.message || "Failed to create checkout session." });
@@ -120,7 +131,7 @@ router.post("/charge", async (req: Request, res: Response) => {
 
   try {
     // STEP 1: Fetch FRESH FX rate (skip cache for accuracy at payment confirmation)
-    const sessionCoinType = session.coinType || SETTLEMENT_TOKEN_TYPE;
+    const sessionCoinType = session.coinType || getDefaultCoin().type;
     let currentRate = 1300;
     try {
       currentRate = await fxService.getRateNGNToToken(sessionCoinType, true); // skipCache=true
@@ -131,8 +142,9 @@ router.post("/charge", async (req: Request, res: Response) => {
     }
 
     // STEP 2: Calculate settlement amount with fresh rate
-    const settlementAmount = Math.floor((session.amount / currentRate) * 1_000_000_000); // 9 decimal places (SUI/USDC)
-    logger.info("CHECKOUT", `Calculated settlement: ₦${session.amount} @ ₦${currentRate}/token = ${settlementAmount / 1_000_000_000} token(s) for nonce ${session.nonce}`);
+    const decimals = getDecimals(sessionCoinType);
+    const settlementAmount = Math.floor((session.amount / currentRate) * 10 ** decimals);
+    logger.info("CHECKOUT", `Calculated settlement: ₦${session.amount} @ ₦${currentRate}/token = ${settlementAmount / 10 ** decimals} token(s) for nonce ${session.nonce}`);
 
     // STEP 3: Pre‑flight treasury balance verification
     if (!(await assertTreasurySufficient(settlementAmount, sessionCoinType, session.nonce, res))) {
@@ -263,7 +275,7 @@ router.get("/status/:nonce", async (req: Request, res: Response) => {
  * Prepares crypto payment intent for wallet connect or outPay QR.
  */
 router.post("/crypto/intent", async (req: Request, res: Response) => {
-  const { token, method } = req.body;
+  const { token, method, coinType: reqCoinType } = req.body;
 
   if (!token) {
     return res.status(400).json({ error: "Missing token." });
@@ -281,7 +293,7 @@ router.post("/crypto/intent", async (req: Request, res: Response) => {
   }
 
   try {
-    const sessionCoinType = session.coinType || SETTLEMENT_TOKEN_TYPE;
+    const sessionCoinType = reqCoinType || session.coinType || getDefaultCoin().type;
     let rate = 1;
     if (session.currency === "NGN") {
       try {
@@ -292,17 +304,18 @@ router.post("/crypto/intent", async (req: Request, res: Response) => {
       }
     }
 
+    const decimals = getDecimals(sessionCoinType);
     const amountBaseUnits = Math.floor(
       session.currency === "NGN"
-        ? (session.amount / rate) * 1_000_000_000
-        : session.amount * 1_000_000_000
+        ? (session.amount / rate) * 10 ** decimals
+        : session.amount * 10 ** decimals
     );
 
     const invoiceMetadata = {
       nonce: session.nonce,
       amountNaira: session.currency === "NGN" ? session.amount : 0,
       exchangeRate: rate,
-      amountSettled: amountBaseUnits / 1_000_000_000,
+      amountSettled: amountBaseUnits / 10 ** decimals,
       settlementToken: sessionCoinType,
       merchantAddress: session.merchantAddress,
       fiatMethod: method || "sui_wallet",
@@ -365,7 +378,7 @@ router.post("/crypto/confirm", async (req: Request, res: Response) => {
   }
 
   try {
-    const sessionCoinType = session.coinType || SETTLEMENT_TOKEN_TYPE;
+    const sessionCoinType = session.coinType || getDefaultCoin().type;
     const amountBaseUnits = session.cryptoAmountBaseUnits || 0;
     const verification = await suiService.verifyCryptoPaymentTx(txDigest, nonce);
 
@@ -375,7 +388,7 @@ router.post("/crypto/confirm", async (req: Request, res: Response) => {
 
     const confirmedTxDigest = txDigest;
 
-    const amountTokens = amountBaseUnits / 1_000_000_000;
+    const amountTokens = amountBaseUnits / 10 ** getDecimals(sessionCoinType);
     const invoiceMetadata = session.cryptoWalrusInvoice || {
       nonce: session.nonce,
       amountNaira: session.currency === "NGN" ? session.amount : 0,
@@ -421,16 +434,15 @@ router.get("/validate/:nonce", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Checkout session expired or not found." });
     }
 
-    // Calculate settlement amount in base units (9 decimals for SUI/USDC)
+    const coinType = session.coinType || getDefaultCoin().type;
     let estimatedRate = session.estimatedRate || 1300;
     try {
-      estimatedRate = await fxService.getRateNGNToToken(session.coinType);
+      estimatedRate = await fxService.getRateNGNToToken(coinType);
     } catch (e) {
       // Fallback to cached rate
     }
 
-    const settlementAmount = Math.floor((session.amount / estimatedRate) * 1_000_000_000);
-    const coinType = session.coinType || SETTLEMENT_TOKEN_TYPE;
+    const settlementAmount = Math.floor((session.amount / estimatedRate) * 10 ** getDecimals(coinType));
 
     logger.info(
       "CHECKOUT",
@@ -492,7 +504,7 @@ router.post("/webhook", validateWebhookAuth, async (req: Request, res: Response)
     // 1. Use validated rate from /charge endpoint (stored in session during payment confirmation)
     // If not present (legacy sessions), fall back to fresh fetch with safe default
     let currentRate = session.validatedRate || 1300;
-    const sessionCoinType = session.coinType || SETTLEMENT_TOKEN_TYPE;
+    const sessionCoinType = session.coinType || getDefaultCoin().type;
 
     if (!session.validatedRate) {
       try {
@@ -506,10 +518,11 @@ router.post("/webhook", validateWebhookAuth, async (req: Request, res: Response)
       logger.info("WEBHOOK", `Using pre-validated FX rate from /charge: ₦${currentRate}`);
     }
 
-    const settlementAmount = Math.floor((amount / currentRate) * 1_000_000_000); // 9 decimal places precision (SUI/USDC)
+    const decimals = getDecimals(sessionCoinType);
+    const settlementAmount = Math.floor((amount / currentRate) * 10 ** decimals);
     // Variable to hold the Walrus blob ID (may be reused across retries)
     let walrusBlobId: string;
-    logger.info("WEBHOOK", `Settlement calculation: ₦${amount} @ ₦${currentRate}/token = ${settlementAmount / 1_000_000_000} token(s)`);
+    logger.info("WEBHOOK", `Settlement calculation: ₦${amount} @ ₦${currentRate}/token = ${settlementAmount / 10 ** decimals} token(s)`);
 
     // 2. Upload proof-of-payment invoice metadata anonymously to Walrus (idempotent) with Redis lock
     const lockKey = `uploadLock:${session.nonce}`;
@@ -534,7 +547,7 @@ router.post("/webhook", validateWebhookAuth, async (req: Request, res: Response)
             nonce: session.nonce,
             amountNaira: amount,
             exchangeRate: currentRate,
-            amountSettled: settlementAmount / 1_000_000_000,
+            amountSettled: settlementAmount / 10 ** decimals,
             settlementToken: sessionCoinType,
             merchantAddress: session.merchantAddress,
             fiatMethod: session.method || "bank_transfer",
@@ -617,16 +630,17 @@ router.post("/stripe-webhook", async (req: Request, res: Response) => {
     await redisService.updateSessionStatus(session.nonce, "PROCESSING");
 
     let currentRate = session.validatedRate || 1300;
-    const sessionCoinType = session.coinType || SETTLEMENT_TOKEN_TYPE;
+    const sessionCoinType = session.coinType || getDefaultCoin().type;
+    const decimals = getDecimals(sessionCoinType);
 
-    const settlementAmount = Math.floor((session.amount / currentRate) * 1_000_000_000);
-    logger.info("STRIPE-WEBHOOK", `Settlement calculation: ${session.amount} @ ${currentRate}/token = ${settlementAmount / 1_000_000_000} token(s)`);
+    const settlementAmount = Math.floor((session.amount / currentRate) * 10 ** decimals);
+    logger.info("STRIPE-WEBHOOK", `Settlement calculation: ${session.amount} @ ${currentRate}/token = ${settlementAmount / 10 ** decimals} token(s)`);
 
     const invoiceMetadata = {
       nonce: session.nonce,
       amountNaira: session.amount,
       exchangeRate: currentRate,
-      amountSettled: settlementAmount / 1_000_000_000,
+      amountSettled: settlementAmount / 10 ** decimals,
       settlementToken: sessionCoinType,
       merchantAddress: session.merchantAddress,
       fiatMethod: "stripe",

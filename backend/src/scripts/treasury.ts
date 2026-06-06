@@ -8,6 +8,7 @@ import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
 import fetch from "node-fetch";
 import { getEnv } from "../config/env.js";
+import { getDefaultCoin, getSupportedCoinList, getCoinConfig, getDecimals } from "../config/coins.js";
 
 // Load configuration
 const SUI_RPC_ENDPOINT = getEnv("SUI_RPC_ENDPOINT", "https://fullnode.testnet.sui.io:443");
@@ -17,6 +18,27 @@ const TREASURY_ID = getEnv("TREASURY_ID");
 const SUI_OPERATOR_PRIVATE_KEY = getEnv("SUI_OPERATOR_PRIVATE_KEY");
 
 const TREASURY_ADMIN_CAP_ID = getEnv("TREASURY_ADMIN_CAP_ID", "");
+
+async function findCoin(client: SuiJsonRpcClient, address: string, coinType: string, amount: bigint): Promise<string> {
+  const response = await fetch(SUI_RPC_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "suix_getCoins",
+      params: [address, coinType, null, 50]
+    })
+  });
+  const resData: any = await response.json();
+  const coins = resData.result?.data || [];
+  if (coins.length === 0) {
+    throw new Error(`No ${coinType} coins found in operator wallet.`);
+  }
+  const coin = coins.find((c: any) => BigInt(c.balance) >= amount) || coins[0];
+  console.log(`Using coin ${coin.coinObjectId} with balance ${coin.balance}`);
+  return coin.coinObjectId;
+}
 
 async function getTreasuryAdminCap(client: SuiJsonRpcClient, address: string): Promise<string> {
   if (TREASURY_ADMIN_CAP_ID) return TREASURY_ADMIN_CAP_ID;
@@ -46,7 +68,9 @@ async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
   const amountStr = args[1];
-  const tokenType = args[2] || "0x2::sui::SUI";
+  const rawTokenType = args[2];
+  const cfg = rawTokenType ? getCoinConfig(rawTokenType) : undefined;
+  const tokenType = cfg?.type || rawTokenType || getDefaultCoin().type;
 
   if (!["deposit", "withdraw", "balance"].includes(command)) {
     console.error("Usage: node dist/scripts/treasury.js <deposit|withdraw|balance> [amount] [coin_type]");
@@ -72,37 +96,36 @@ async function main() {
   console.log(`Operator Address: ${adminAddress}`);
 
   if (command === "balance") {
-    console.log("Fetching Treasury balance...");
-    const inspectTx = new Transaction();
-    inspectTx.moveCall({
-      target: `${PACKAGE_ID}::treasury::balance`,
-      typeArguments: [tokenType],
-      arguments: [inspectTx.object(TREASURY_ID)]
-    });
-    inspectTx.setSender(adminAddress);
-    // Use SDK devInspect to fetch return values safely
-    const devInspect = await client.devInspectTransactionBlock({
-      sender: adminAddress,
-      transactionBlock: inspectTx
-    });
-    if (devInspect.error) {
-      console.error("Failed to inspect balance:", devInspect.error);
-      return;
-    }
-    // devInspect.results?.[0]?.returnValues is an array of [Uint8Array, string] tuples
-    const results = devInspect.results?.[0]?.returnValues;
+    const coins = getSupportedCoinList();
     const SUISCAN_BASE = "https://suiscan.xyz/testnet/object";
     console.log(`🔎 Treasury inspection link: ${SUISCAN_BASE}/${TREASURY_ID}`);
-    if (results && results.length > 0 && results[0][0]) {
-      // The first element of the tuple is a Uint8Array containing the BCS‑encoded u64 balance
-      const bytes = Uint8Array.from(results[0][0] as any);
-      let balance: bigint = 0n;
-      for (let i = 0; i < bytes.length; i++) {
-        balance += BigInt(bytes[i]) << BigInt(8 * i);
+    for (const coin of coins) {
+      const inspectTx = new Transaction();
+      inspectTx.moveCall({
+        target: `${PACKAGE_ID}::treasury::balance`,
+        typeArguments: [coin.type],
+        arguments: [inspectTx.object(TREASURY_ID)]
+      });
+      inspectTx.setSender(adminAddress);
+      const devInspect = await client.devInspectTransactionBlock({
+        sender: adminAddress,
+        transactionBlock: inspectTx
+      });
+      if (devInspect.error) {
+        console.error(`Failed to inspect balance for ${coin.symbol}: ${devInspect.error}`);
+        continue;
       }
-      console.log(`Treasury Balance for ${tokenType}: ${Number(balance) / 1_000_000_000} (raw: ${balance})`);
-    } else {
-      console.log(`Treasury Balance for ${tokenType}: 0 (raw: 0)`);
+      const results = devInspect.results?.[0]?.returnValues;
+      if (results && results.length > 0 && results[0][0]) {
+        const bytes = Uint8Array.from(results[0][0] as any);
+        let balance: bigint = 0n;
+        for (let i = 0; i < bytes.length; i++) {
+          balance += BigInt(bytes[i]) << BigInt(8 * i);
+        }
+        console.log(`  ${coin.symbol}: ${Number(balance) / 10 ** coin.decimals} (raw: ${balance})`);
+      } else {
+        console.log(`  ${coin.symbol}: 0 (raw: 0)`);
+      }
     }
     return;
   }
@@ -111,7 +134,8 @@ async function main() {
     console.error("Please provide a valid amount.");
     process.exit(1);
   }
-  const amountBaseUnits = Math.floor(parseFloat(amountStr) * 1_000_000_000);
+  const decimals = getDecimals(tokenType);
+  const amountBaseUnits = Math.floor(parseFloat(amountStr) * 10 ** decimals);
   const capId = await getTreasuryAdminCap(client, adminAddress);
 
   const tx = new Transaction();
@@ -121,11 +145,16 @@ async function main() {
   if (command === "deposit") {
     console.log(`Depositing ${amountStr} ${tokenType} into Treasury...`);
     let coinToDeposit;
+    const cfg = getCoinConfig(tokenType);
+    if (!cfg) {
+      console.error(`Unsupported coin type: ${tokenType}`);
+      process.exit(1);
+    }
     if (tokenType === "0x2::sui::SUI") {
       [coinToDeposit] = tx.splitCoins(tx.gas, [tx.pure.u64(amountBaseUnits)]);
     } else {
-      console.error("Only SUI deposits are supported in this script.");
-      process.exit(1);
+      const sourceCoinId = await findCoin(client, adminAddress, tokenType, BigInt(amountBaseUnits));
+      [coinToDeposit] = tx.splitCoins(tx.object(sourceCoinId), [tx.pure.u64(amountBaseUnits)]);
     }
     tx.moveCall({
       target: `${PACKAGE_ID}::treasury::deposit`,

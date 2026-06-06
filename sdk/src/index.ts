@@ -33,6 +33,7 @@ export class SuiOutKit {
           amount: options.amount,
           currency: options.currency,
           merchantAddress: this.merchantAddress,
+          coinType: options.coinType,
           metadata: options.metadata || {}
         })
       });
@@ -86,7 +87,7 @@ export class SuiOutKit {
    */
   public wrapButton(
     selector: string,
-    options: { amount: number; currency: "NGN" | "SUI" | string; metadata?: Record<string, any> }
+    options: { amount: number; currency: "NGN" | "SUI" | string; coinType?: string; metadata?: Record<string, any> }
   ): void {
     const btn = document.querySelector(selector) as HTMLButtonElement;
     if (!btn) {

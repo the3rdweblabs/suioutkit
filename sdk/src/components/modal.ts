@@ -420,13 +420,27 @@ export class SuiOutKitModal {
     const container = this.overlay?.querySelector("#sok-content-panel");
     if (!container) return;
 
+    const coins = this.session.supportedCoins || [];
+    const currentCoin = this.session.coinType || "0x2::sui::SUI";
+    const currentSymbol = coins.find((c) => c.type === currentCoin)?.symbol || "SUI";
+
+    const coinChips = coins.length > 1
+      ? `<div class="sok-coin-selector">${coins
+          .map(
+            (c) =>
+              `<button class="sok-coin-chip${c.type === currentCoin ? " active" : ""}" data-coin-type="${c.type}">${c.symbol}</button>`
+          )
+          .join("")}</div>`
+      : `<div class="sok-coin-badge">${currentSymbol}</div>`;
+
     container.innerHTML = `
       <button class="suioutkit-back" id="sok-back-btn">← Back to methods</button>
       <div class="suioutkit-header">
         <h2 class="suioutkit-title">Pay with Sui Wallet</h2>
-        <p class="suioutkit-subtitle">Choose SUI payment channel</p>
+        <p class="suioutkit-subtitle">Choose settlement token and payment channel</p>
       </div>
       <div class="suioutkit-panel">
+        ${coinChips}
         <p class="sok-status-text" style="margin-bottom: 12px;">
           Choose whether to pay via a desktop extension wallet or scan a dynamic QR Code with your mobile wallet.
         </p>
@@ -438,6 +452,18 @@ export class SuiOutKitModal {
         </button>
       </div>
     `;
+
+    if (coins.length > 1) {
+      container.querySelectorAll(".sok-coin-chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          const coinType = (chip as HTMLElement).dataset.coinType || "";
+          if (coinType && coinType !== this.session.coinType) {
+            this.session.coinType = coinType;
+            void this.handleCryptoPaymentPanel();
+          }
+        });
+      });
+    }
 
     container.querySelector("#sok-back-btn")?.addEventListener("click", () => this.renderSelectionPanel());
 
@@ -858,13 +884,17 @@ export class SuiOutKitModal {
   }
 
   private async loadCryptoIntent(method: "sui_wallet" | "outpay"): Promise<CryptoIntentResponse> {
+    const body: Record<string, any> = {
+      token: this.session.token,
+      method
+    };
+    if (this.session.coinType) {
+      body.coinType = this.session.coinType;
+    }
     const response = await fetch(joinApiPath(this.backendUrl, "checkout", "crypto", "intent"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        token: this.session.token,
-        method
-      })
+      body: JSON.stringify(body)
     });
 
     const result: any = await response.json();

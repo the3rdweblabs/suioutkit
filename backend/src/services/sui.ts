@@ -10,6 +10,7 @@ import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
 import { paymentKit } from "@mysten/payment-kit";
 import { SuiJsonRpcClient } from "@mysten/sui/jsonRpc";
 import { getEnv } from "../config/env.js";
+import { getDefaultCoin } from "../config/coins.js";
 
 // Contract Object IDs and config loaded safely from environment
 const SUI_GRPC_ENDPOINT = getEnv("SUI_GRPC_ENDPOINT", "https://fullnode.testnet.sui.io:443");
@@ -79,7 +80,7 @@ class SuiIntegrationService {
     merchantAddress: string,
     nonce: string,
     walrusBlobId: string,
-    tokenType: string = "0x2::sui::SUI" // Default to native SUI or any customized token (e.g. USDC)
+    tokenType: string = getDefaultCoin().type
   ): Promise<{ txDigest: string; status: string }> {
     if (!PACKAGE_ID || !TREASURY_ID || !FIAT_REGISTRY_ID) {
       throw new Error("Sui Integration: PACKAGE_ID, TREASURY_ID, or FIAT_REGISTRY_ID is missing from environment variables.");
@@ -252,7 +253,7 @@ class SuiIntegrationService {
    * Pre-flight check: Query Treasury balance directly via standard RPC JSON-RPC call.
    * Called before showing payment interface to verify settlement will succeed.
    */
-  public async checkTreasuryBalance(amount: number, tokenType: string = "0x2::sui::SUI"): Promise<{ available: number; required: number; sufficient: boolean }> {
+  public async checkTreasuryBalance(amount: number, tokenType: string = getDefaultCoin().type): Promise<{ available: number; required: number; sufficient: boolean }> {
     if (!TREASURY_ID) {
       throw new Error("Sui Integration: TREASURY_ID is missing from environment variables.");
     }

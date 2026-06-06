@@ -478,6 +478,48 @@
   100% { top: 0; }
 }
 
+.sok-coin-selector {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.sok-coin-chip {
+  background: var(--sok-card-bg);
+  border: 2px solid var(--sok-border);
+  border-radius: 20px;
+  padding: 6px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--sok-text);
+}
+
+.sok-coin-chip:hover {
+  border-color: var(--sok-accent);
+  color: var(--sok-accent);
+}
+
+.sok-coin-chip.active {
+  border-color: var(--sok-accent);
+  background: var(--sok-accent);
+  color: #ffffff;
+}
+
+.sok-coin-badge {
+  display: inline-block;
+  background: var(--sok-accent);
+  color: #ffffff;
+  border-radius: 20px;
+  padding: 4px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
 .suioutkit-wallet-list {
   display: flex;
   flex-direction: column;
