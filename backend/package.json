@@ -9,7 +9,7 @@
   "type": "module",
   "scripts": {
      "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js",
+    "start": "node --require ./crypto-polyfill.cjs dist/index.js",
     "dev": "tsc -w & nodemon dist/index.js",
     "treasury:balance": "node dist/scripts/treasury.js balance",
     "treasury:deposit": "node dist/scripts/treasury.js deposit",
