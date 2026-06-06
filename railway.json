@@ -1,0 +1,10 @@
+{
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "cd backend && npm install && npm run build"
+  },
+  "deploy": {
+    "startCommand": "node backend/dist/index.js",
+    "healthcheckPath": "/health"
+  }
+}
