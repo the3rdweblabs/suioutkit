@@ -1,6 +1,6 @@
 {
   "name": "suioutkit",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Premium Universal Payment Gateway SDK for instant settlement on Sui",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
