@@ -27,8 +27,8 @@ For a quick local run you typically need at least:
 PORT=5000
 REDIS_MODE=local
 REDIS_URL=redis://localhost:6379
-SETTLEMENT_TOKEN_TYPE=0x2::sui::SUI
 SUI_NETWORK=testnet
+SUPPORTED_COINS='{"SUI":{"type":"0x2::sui::SUI","coingeckoId":"sui","decimals":9}}'
 ```
 
 Operator-only values (Sui keys, WALRUS keys, provider secrets) are required for a production deployment. See [`backend/.env.example`](/backend/.env.example) for full list and example values.
@@ -55,17 +55,21 @@ Notes:
 | Variable | Description |
 |----------|-------------|
 | `SUI_RPC_ENDPOINT` | JSON-RPC endpoint (used by indexer for `suix_queryEvents` polling) |
+| `SUI_GRPC_ENDPOINT` | gRPC endpoint (used by SuiGrpcClient for Payment Kit flows) |
 | `SUI_NETWORK` | `testnet` or `mainnet` |
 | `PACKAGE_ID` | Published suioutkit Move package |
 | `PAYMENT_KIT_PACKAGE_ID_testnet` / `PAYMENT_KIT_PACKAGE_ID_mainnet` | Payment Kit registry package (required for outPay flow) |
 | `TREASURY_ID` | Treasury shared object |
+| `TREASURY_ADMIN_CAP_ID` | Optional - TreasuryAdminCap object ID (skips wallet scan on treasury scripts) |
 | `FIAT_REGISTRY_ID` | Payment Kit registry (fiat) |
 | `FIAT_REGISTRY_ADMIN_CAP_ID` | Registry admin cap |
 | `FIAT_REGISTRY_NAME` | Registry name string (e.g. `suioutkit-fiat-settlements`) |
 | `CRYPTO_REGISTRY_ID` | Registry (crypto flows) |
 | `CRYPTO_REGISTRY_NAME` | Registry name string |
 | `CRYPTO_REGISTRY_ADMIN_CAP_ID` | Crypto admin cap |
-| `SETTLEMENT_TOKEN_TYPE` | e.g. `0x2::sui::SUI` |
+| `SUPPORTED_COINS` | JSON map of settlement coins. Format: `{"SYMBOL":{"type":"<full_coin_type>","coingeckoId":"<coingecko_id>","decimals":<int>}}`. Example: `{"SUI":{"type":"0x2::sui::SUI","coingeckoId":"sui","decimals":9},"USDC":{"type":"0x...::usdc::USDC","coingeckoId":"usd-coin","decimals":6}}` |
+| `DEFAULT_COIN` | Symbol of the default settlement coin (default `SUI`) |
+| `SETTLEMENT_TOKEN_TYPE` | Legacy - fallback when `SUPPORTED_COINS` is not set. Use `SUPPORTED_COINS` instead. |
 | `SUI_OPERATOR_PRIVATE_KEY` | Signs settlement PTBs |
 
 Notes:
@@ -79,7 +83,11 @@ Notes:
 |----------|-------------|
 | `WALRUS_UPLOAD_MODE` | `publisher` or `sdk` |
 | `WALRUS_EPOCHS` | Storage epochs |
+| `WALRUS_DELETABLE` | Allow blob deletion (default `false`) |
 | `WALRUS_PUBLISHER_URL` | Publisher URL (testnet/mainnet) |
+| `WALRUS_USE_UPLOAD_RELAY` | Enable upload relay fallback |
+| `WALRUS_UPLOAD_RELAY_URL` | Upload relay endpoint |
+| `WALRUS_UPLOAD_RELAY_MAX_TIP` | Max tip for relay upload |
 | `WALRUS_OPERATOR_PRIVATE_KEY` | Required when `WALRUS_UPLOAD_MODE=sdk` |
 
 Notes:
@@ -90,7 +98,7 @@ Notes:
 
 | Issue | Check |
 |-------|--------|
-| Treasury abort code 4 | Fund treasury for `SETTLEMENT_TOKEN_TYPE` |
+| Treasury abort code 4 | Fund treasury for the settlement coin type (see `SUPPORTED_COINS`) |
 | FX falls back to ~1300 | FX upstream unreachable |
 | Walrus upload fails | Try upload relay or publisher mode |
 

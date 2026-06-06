@@ -179,7 +179,7 @@ Author: @CYBWithFlourish (https://github.com/CYBWithFlourish)
 
       try {
         const SuiOutKit = await loadSdk();
-        sdk = new SuiOutKit({ merchantAddress: MERCHANT_ADDRESS });
+        sdk = new SuiOutKit({ merchantAddress: MERCHANT_ADDRESS, mode: "local" });
         checkoutBtn.disabled = false;
         checkoutBtn.textContent = "Pay ₦1000";
         statusEl.textContent = `SDK loaded from ${SDK_URL}\nMerchant: ${MERCHANT_ADDRESS}`;

@@ -10,15 +10,16 @@ npm install suioutkit
 ```
 
 Drop-in checkout for your site - no backend to deploy. See [Installation](/docs/getting-started/installation).
-Note: the published npm package uses the hosted API by default (`https://api.suioutkit.xyz`). When running the SDK from source the default origin may point to `http://localhost:5000` for local development - you can always override with the `backendUrl` constructor option.
+The SDK defaults to `mode: "live"` (hosted API at `https://api.suioutkit.xyz`, mainnet). Use `mode: "local"` or `mode: "test"` for development.
 
 ## Constructor
 
 ```ts
 const sdk = new SuiOutKit({
-  merchantAddress: "0x...", // required
-  // backendUrl optional - defaults to the hosted API in production
-  // override with "http://localhost:5000" for local backend during development
+  merchantAddress: "0x...",                     // required
+  // mode: "local",                             // localhost:5000, testnet
+  // mode: "test",                              // staging, testnet
+  // mode: "live",                              // production, mainnet (default)
 });
 ```
 
@@ -30,11 +31,12 @@ const sdk = new SuiOutKit({
 const session = await sdk.initCheckout({
   amount: 45000,
   currency: "NGN",
+  coinType?: "0x2::sui::SUI",   // optional: override settlement coin
   metadata?: { orderId: "ORDER-123" },
 });
 ```
 
-Returns `CheckoutSession` with `token`, `nonce`, `coinType`, `estimatedRate`, etc.
+Returns `CheckoutSession` with `token`, `nonce`, `coinType`, `supportedCoins`, `estimatedRate`, etc.
 
 ### `openModal(session, options?)`
 
@@ -61,6 +63,14 @@ Options (`SuiOutKitModalOptions`):
 ### `wrapButton(selector, options)`
 
 Binds checkout to a DOM button by CSS selector.
+
+```ts
+sdk.wrapButton("#pay-btn", {
+  amount: 45000,
+  currency: "NGN",
+  coinType: "0x2::sui::SUI",   // optional
+});
+```
 
 ### `confirmCryptoPayment(nonce, txDigest, method?)`
 
@@ -103,11 +113,7 @@ Crypto: `POST /v1/checkout/crypto/intent` → wallet PTB → `confirmCryptoPayme
 
 ## Network
 
-Set before opening the modal for crypto flows:
-
-```html
-<script>window.SuiOutKitNetwork = "testnet";</script>
-```
+The SDK sets the Sui network automatically based on `mode`. No manual script tag is needed (like in previous versions).
 
 ## Full npm readme
 

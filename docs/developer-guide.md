@@ -5,7 +5,7 @@ description: Platform architecture, API contract, environment variables, and CI 
 
 This guide explains how the SuiOutKit platform is structured and how the SDK communicates with the backend during checkout and settlement.
 
-**Merchants** use the hosted API at `https://api.suioutkit.xyz` with routes under `/v1/` (SDK default). See [Hosted API](/docs/hosted-api) for the deploy checklist and route map.
+**Merchants** use the hosted API at `https://api.suioutkit.xyz` with routes under `/v1/` (SDK `mode: "live"` default). See [Hosted API](/docs/hosted-api) for the deploy checklist and route map.
 
 ## Overview
 SuiOutKit is a settlement system for payment methods that eventually resolve into Sui-based settlement. Developers integrate the browser SDK published as [`suioutkit`](https://www.npmjs.com/package//suioutkit), while the backend handles payment provider calls, treasury validation, receipt storage, and on-chain settlement.
@@ -31,6 +31,7 @@ The merchant site initializes a checkout session through the SDK.
 const session = await sdk.initCheckout({
   amount: 45000,
   currency: "NGN",
+  coinType: "0x2::sui::SUI", // optional: override settlement coin
   metadata: { orderId: "ORDER-123" }
 });
 ```
@@ -39,7 +40,7 @@ The SDK sends the request to:
 
 - `POST /v1/checkout/session`
 
-The backend returns a session object containing a nonce, token, estimated FX rate, settlement coin type, and status.
+The backend returns a session object containing a nonce, token, estimated FX rate, settlement coin type, supported coins list, and status.
 
 ### 2. User Confirms Payment
 When the user clicks the payment action, the SDK calls:
@@ -79,9 +80,9 @@ import { SuiOutKit } from "suioutkit";
 
 Methods:
 
-- `initCheckout(options)` - creates a session
+- `initCheckout(options)` - creates a session (accepts `amount`, `currency`, `metadata?`, `coinType?`)
 - `openModal(session, options?)` - opens the checkout UI (accepts `SuiOutKitModalOptions` with `onClose`, `onPaymentComplete`, `redirectUrl`, `autoCloseOnSuccess`)
-- `wrapButton(selector, options)` - binds checkout to a button
+- `wrapButton(selector, options)` - binds checkout to a button (accepts `amount`, `currency`, `coinType?`, `metadata?`)
 
 ### Helper Exports
 The package also exposes small helpers for custom integrations:
@@ -105,6 +106,7 @@ Request body:
   "amount": 45000,
   "currency": "NGN",
   "merchantAddress": "0x...",
+  "coinType": "0x2::sui::SUI",
   "metadata": {}
 }
 ```
@@ -148,10 +150,15 @@ The backend uses the following variables from [`backend/.env`](/backend/.env):
 - `WALRUS_UPLOAD_RELAY_MAX_TIP`
 - `WALRUS_PUBLISHER_URL`
 - `SUI_RPC_ENDPOINT`
+- `SUI_GRPC_ENDPOINT`
 - `SUI_NETWORK`
 - `PACKAGE_ID`
 - `PAYMENT_KIT_PACKAGE_ID_testnet` / `PAYMENT_KIT_PACKAGE_ID_mainnet` - Payment Kit registry package (outPay flow)
 - `TREASURY_ID`
+- `TREASURY_ADMIN_CAP_ID` - optional TreasuryAdminCap override
+- `SUPPORTED_COINS` - JSON map of settlement coins (primary config, replaces `SETTLEMENT_TOKEN_TYPE`)
+- `DEFAULT_COIN` - default settlement coin symbol (default `SUI`)
+- `SETTLEMENT_TOKEN_TYPE` - legacy fallback when `SUPPORTED_COINS` is not set
 - `FIAT_REGISTRY_ID`
 - `FIAT_REGISTRY_ADMIN_CAP_ID`
 - `CRYPTO_REGISTRY_ID`
@@ -159,7 +166,6 @@ The backend uses the following variables from [`backend/.env`](/backend/.env):
 - `CRYPTO_REGISTRY_ADMIN_CAP_ID`
 - `SUI_OPERATOR_PRIVATE_KEY`
 - `WALRUS_OPERATOR_PRIVATE_KEY`
-- `SETTLEMENT_TOKEN_TYPE`
 
 ## Treasury and FX Policy
 A payment confirmation is only allowed if the backend can validate two things:

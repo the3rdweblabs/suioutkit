@@ -89,6 +89,8 @@ const githubUrl = "https://github.com/the3rdweblabs/suioutkit";
 
 const sdk = new SuiOutKit({
   merchantAddress: "0x...",
+  // mode: "local", // optional, local dev
+  // mode: "live",  // optional, production (default)
 });'
           />
         </div>
@@ -104,6 +106,8 @@ const sdk = new SuiOutKit({
             code='sdk.initCheckout({
   amount: 45000,
   currency: "NGN",
+  // coinType: "0x2::sui::SUI",   // optional settlement coin override
+  // metadata: { orderId: "..." },
 });'
           />
         </div>

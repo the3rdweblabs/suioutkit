@@ -7,11 +7,11 @@ SuiOutKit is offered as **SDK + hosted backend**. Merchants integrate with `npm 
 
 ## API base URL
 
-| Environment | Origin | Notes |
-|-------------|--------|--------|
-| **Production** | `https://api.suioutkit.xyz` | Default in the SDK |
-| **Staging** (future) | `https://staging.api.suioutkit.xyz` | Override via `backendUrl` |
-| **Local** (contributors) | `http://localhost:5000` | `backendUrl` override when running Docker / `npm start` |
+| Environment | Origin | Mode | Sui network |
+|-------------|--------|------|-------------|
+| **Production** | `https://api.suioutkit.xyz` | `"live"` (default) | mainnet |
+| **Staging** | `https://api.staging.suioutkit.xyz` | `"test"` | testnet |
+| **Local** | `http://localhost:5000` | `"local"` | testnet |
 
 All checkout and payment routes are versioned under **`/v1/`**.
 
@@ -28,7 +28,7 @@ Unversioned paths on the same host (not under `/v1/`):
 | `GET /health` | Load balancer / ops health check |
 | `GET /style.css` | Modal stylesheet (served by API host today) |
 | `GET /assets/*` | Payment method icons |
-| `GET /sdk/dist/*` | Optional: SDK bundle for HTML demos |
+| `GET /sdk/*` | SDK bundle and assets for HTML demos |
 
 ## v1 route map
 
@@ -83,7 +83,7 @@ Merchants do **not** need to clone this repo, run Docker, or manage `backend/.en
 
 ## Implementation notes
 
-- SDK default origin: [`https://api.suioutkit.xyz`](https://api.suioutkit.xyz) - this is the default API host configured in the published SDK for merchants.
+- SDK mode defaults to `"live"` (production). Use `mode: "local"` in the constructor for local development, or `mode: "test"` for staging.
 - API routes are versioned under `/v1/`. Clients and the SDK should use `/v1/*` for checkout and payment routes.
 - The backend mounts routers at `/v1/checkout` and `/v1/payments`. See [`sdk/src/config/api.ts`](/sdk/src/config/api.ts) for the shared path helper.
 

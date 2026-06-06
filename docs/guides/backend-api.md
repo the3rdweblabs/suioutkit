@@ -19,11 +19,12 @@ Create a checkout session.
   "amount": 45000,
   "currency": "NGN",
   "merchantAddress": "0x...",
+  "coinType": "0x2::sui::SUI",
   "metadata": {}
 }
 ```
 
-Returns session with `token`, `nonce`, `estimatedRate`, `coinType`, `status`.
+Returns session with `token`, `nonce`, `estimatedRate`, `coinType`, `supportedCoins`, `status`.
 
 ## Charge
 
@@ -41,7 +42,7 @@ Start a payment flow. Body:
 
 Methods: `bank_transfer` | `opay` | `stripe`
 
-Returns a provider-specific payload: virtual account details for `bank_transfer`, an OPay instruction for `opay`, or a Stripe `clientSecret` and public key for `stripe`.
+Returns a provider-specific payload: virtual account details, validated FX rate for `bank_transfer`, an OPay instruction for `opay`, or a Stripe `clientSecret` and public key for `stripe`.
 
 Common response codes for this endpoint:
 
@@ -71,7 +72,7 @@ Pre-flight FX and settlement amount preview.
 
 ### `POST /v1/checkout/crypto/intent`
 
-Body: `{ "token", "method?" }` - prepares wallet/outPay intent.
+Body: `{ "token", "method?", "coinType?" }` - prepares wallet/outPay intent for the specified (or default) coin.
 
 ### `POST /v1/checkout/crypto/confirm`
 

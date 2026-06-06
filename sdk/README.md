@@ -9,7 +9,7 @@
 
 Browser SDK for SuiOutKit checkout: create sessions, open a ready-made payment modal, or build a custom UI with helpers.
 
-Uses the **hosted SuiOutKit API** at `https://api.suioutkit.xyz` by default (all routes under `/v1/`). The SDK does not perform settlement, treasury checks, or provider calls itself.
+Defaults to the **hosted SuiOutKit API** at `https://api.suioutkit.xyz` (`mode: "live"`). Switch with `mode: "test"` or `mode: "local"` for development. All routes under `/v1/`. The SDK does not perform settlement, treasury checks, or provider calls itself.
 
 | Resource | Link |
 |----------|------|
@@ -47,7 +47,7 @@ import { SuiOutKit } from "suioutkit";
 
 const sdk = new SuiOutKit({
   merchantAddress: "0xYOUR_MERCHANT_SUI_ADDRESS",
-  // backendUrl optional - defaults to https://api.suioutkit.xyz
+  // mode optional - defaults to "live" (https://api.suioutkit.xyz, mainnet)
 });
 
 export function PayButton() {
@@ -86,14 +86,10 @@ For simple demos you can serve the built SDK bundle from any static host. Build 
 | Option | Type | Required | Description |
 |--------|------|----------|-------------|
 | `merchantAddress` | `string` | Yes | Sui address that receives settlement |
-| `backendUrl` | `string` | No | API origin (no trailing slash). Default: `https://api.suioutkit.xyz`. Use `http://localhost:5000` only for local development. |
+| `mode` | `"local" \| "test" \| "live"` | No | Default: `"live"`. `"local"` → `http://localhost:5000` (testnet), `"test"` → `https://api.staging.suioutkit.xyz` (testnet), `"live"` → `https://api.suioutkit.xyz` (mainnet). |
+| `backendUrl` | `string` | No | Override API origin (no trailing slash). Takes precedence over `mode`. |
 
-### Network (crypto flows)
-The modal reads `window.SuiOutKitNetwork` - set to `"mainnet"` or `"testnet"` before opening the modal if you need a specific network for wallet / outPay flows.
-
-```html
-<script>window.SuiOutKitNetwork = "testnet";</script>
-```
+The SDK automatically sets `window.SuiOutKitNetwork` to the correct Sui network based on `mode` - no manual `<script>` tag needed.
 
 ## API reference
 ### `initCheckout(options)`
@@ -103,6 +99,7 @@ Creates a checkout session on the backend.
 const session = await sdk.initCheckout({
   amount: 45000,       // integer in major units (e.g. 45000 NGN)
   currency: "NGN",     // e.g. "NGN"
+  coinType?: "0x2::sui::SUI",  // optional: override settlement coin
   metadata?: { orderId: "ORDER-123" },
 });
 ```
@@ -116,6 +113,7 @@ const session = await sdk.initCheckout({
 | `amount`, `currency` | Checkout totals |
 | `merchantAddress` | Normalized Sui address |
 | `coinType` | Settlement coin type (from backend config) |
+| `supportedCoins` | Array of `{ symbol, type, decimals }` for available settlement coins |
 | `estimatedRate` | FX preview (NGN → token) when applicable |
 | `packageId`, `cryptoRegistryId`, `cryptoRegistryName` | On-chain config for crypto paths |
 
@@ -158,6 +156,7 @@ Binds checkout to a DOM button.
 | `selector` | `string` | CSS selector (e.g. `"#pay-btn"`) |
 | `options.amount` | `number` | Checkout amount |
 | `options.currency` | `string` | e.g. `"NGN"` |
+| `options.coinType` | `string` | Optional settlement coin type override |
 | `options.metadata` | `object` | Optional passthrough to `initCheckout` |
 
 ---
@@ -270,7 +269,7 @@ Webhooks (`/v1/checkout/webhook`, `/v1/checkout/stripe-webhook`) are server-to-p
 | `409 Treasury insufficient` | Operator vault underfunded for FX settlement amount |
 | Modal stuck on “waiting for settlement” | Webhook not reaching backend (Flutterwave hash, Stripe CLI, or ngrok) |
 | Stripe card errors on small NGN amounts | Backend enforces ~$0.50 USD equivalent minimum |
-| Crypto connect fails | Wrong `window.SuiOutKitNetwork` or registry env on backend |
+| Crypto connect fails | Wrong `mode` or registry env on backend |
 | Styles missing | Backend not serving `/style.css` or wrong `backendUrl` |
 
 See also [Developer Guide - Troubleshooting](/docs/developer-guide.md#troubleshooting).
@@ -278,9 +277,9 @@ See also [Developer Guide - Troubleshooting](/docs/developer-guide.md#troublesho
 
 
 ## Security
-- Only `merchantAddress` and `backendUrl` belong in browser code.
+- Only `merchantAddress`, `mode`, and `backendUrl` belong in browser code.
 - Never embed operator keys, Flutterwave secrets, or Stripe secret keys in the client.
-- Use **HTTPS** for `backendUrl` in production.
+- Use **HTTPS** for the API endpoint in production (default when `mode: "live"`).
 
 Report vulnerabilities through your project’s private security channel (do not file public issues with key material).
 

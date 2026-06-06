@@ -13,7 +13,7 @@
 	<div class="code-editor__body sdk-tree__body">
 		<div class="sdk-tree__row">
 			<div class="code-editor__code sdk-tree__code">
-				<span class="sdk-tree__keyword">import</span> <span class="sdk-tree__punct">{</span> <span class="sdk-tree__fn">SuiOutKit</span>, <span class="sdk-tree__fn">request</span>, <span class="sdk-tree__fn">formatNgn</span>, <span class="sdk-tree__fn">toTokenUnits</span>, <span class="sdk-tree__fn">formatToken</span>, <span class="sdk-tree__fn">createPolling</span> <span class="sdk-tree__punct">}</span> <span class="sdk-tree__keyword">from</span> <span class="sdk-tree__string">"suioutkit"</span>;
+				<span class="sdk-tree__keyword">import</span> <span class="sdk-tree__punct">{</span> <span class="sdk-tree__fn">SuiOutKit</span>, <span class="sdk-tree__fn">request</span>, <span class="sdk-tree__fn">formatNgn</span>, <span class="sdk-tree__fn">toTokenUnits</span>, <span class="sdk-tree__fn">formatToken</span>, <span class="sdk-tree__fn">createPolling</span>, <span class="sdk-tree__fn">DEFAULT_API_ORIGIN</span>, <span class="sdk-tree__fn">API_V1_PREFIX</span> <span class="sdk-tree__punct">}</span> <span class="sdk-tree__keyword">from</span> <span class="sdk-tree__string">"suioutkit"</span>;
 			</div>
 		</div>
 
@@ -49,7 +49,7 @@
 
 		<div class="sdk-tree__row" style="padding-left: 20px;">
 			<div class="code-editor__code sdk-tree__code">
-				<span class="sdk-tree__fn">confirmCryptoPayment</span><span class="sdk-tree__punct">(</span><span class="sdk-tree__desc">nonce, txDigest?</span><span class="sdk-tree__punct">)</span> <span class="sdk-tree__desc">confirm wallet / outPay settlement</span>
+				<span class="sdk-tree__fn">confirmCryptoPayment</span><span class="sdk-tree__punct">(</span><span class="sdk-tree__desc">nonce, txDigest, method?</span><span class="sdk-tree__punct">)</span> <span class="sdk-tree__desc">confirm wallet / outPay settlement</span>
 			</div>
 		</div>
 
@@ -91,7 +91,7 @@
 
 		<div class="sdk-tree__row">
 			<div class="code-editor__code sdk-tree__code">
-				<span class="sdk-tree__fn">formatToken</span><span class="sdk-tree__punct">(</span><span class="sdk-tree__desc">amount, decimals?</span><span class="sdk-tree__punct">)</span> <span class="sdk-tree__desc">display-friendly token amount string</span>
+				<span class="sdk-tree__fn">formatToken</span><span class="sdk-tree__punct">(</span><span class="sdk-tree__desc">amount, decimals?, digits?</span><span class="sdk-tree__punct">)</span> <span class="sdk-tree__desc">display-friendly token amount string</span>
 			</div>
 		</div>
 

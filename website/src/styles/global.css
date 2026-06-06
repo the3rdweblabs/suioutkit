@@ -435,18 +435,13 @@ pre {
 
 .hero__ascii {
   margin: 48px auto 12px;
-  /* keep spacing */
   font-family: var(--font-mono);
-  font-size: clamp(10px, 1.2vw, 20px);
-  /* larger, bolder text */
-  line-height: 1.2;
+  font-size: clamp(3.5px, 1.3vw, 20px);
+  line-height: 1.15;
   color: var(--ascii);
   font-weight: 700;
-  /* make text bold */
   text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
-  /* subtle glow for emphasis */
   white-space: pre;
-  overflow-x: auto;
   opacity: 0.95;
   animation: asciiPulse 6s ease-in-out infinite;
   text-align: center;

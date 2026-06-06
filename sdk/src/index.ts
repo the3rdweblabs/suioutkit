@@ -2,9 +2,10 @@
 // Copyright (c) 2026 The3rdWebLabs (https://github.com/the3rdweblabs)
 // Author: @CYBWithFlourish (https://github.com/CYBWithFlourish)
 
-import { CheckoutSession, CheckoutSessionOptions, CryptoConfirmResponse, SuiOutKitModalOptions } from "./types/index.js";
+import { CheckoutSession, CheckoutSessionOptions, CryptoConfirmResponse, SuiOutKitModalOptions, SuiOutKitConfig, SuiOutKitMode } from "./types/index.js";
 import { SuiOutKitModal } from "./components/modal.js";
-import { DEFAULT_API_ORIGIN, joinApiPath } from "./config/api.js";
+import { joinApiPath, DEFAULT_API_ORIGIN } from "./config/api.js";
+import { MODE_MAP } from "./config/modes.js";
 
 export { DEFAULT_API_ORIGIN, API_V1_PREFIX } from "./config/api.js";
 
@@ -12,13 +13,15 @@ export class SuiOutKit {
   private backendUrl: string;
   private merchantAddress: string;
 
-  constructor(config: { merchantAddress: string; backendUrl?: string }) {
+  constructor(config: SuiOutKitConfig) {
     if (!config.merchantAddress) {
       throw new Error("SuiOutKit Error: merchantAddress is required.");
     }
-    // Strip trailing slashes and provide default fallback
-    this.backendUrl = (config.backendUrl || DEFAULT_API_ORIGIN).replace(/\/+$/, "");
+    const mode: SuiOutKitMode = config.mode || "live";
+    const modeCfg = MODE_MAP[mode];
+    this.backendUrl = (config.backendUrl || modeCfg.backendUrl).replace(/\/+$/, "");
     this.merchantAddress = config.merchantAddress;
+    (window as any).SuiOutKitNetwork = modeCfg.suiNetwork;
   }
 
   /**

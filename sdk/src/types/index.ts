@@ -2,7 +2,13 @@
 // Copyright (c) 2026 The3rdWebLabs (https://github.com/the3rdweblabs)
 // Author: @CYBWithFlourish (https://github.com/CYBWithFlourish)
 
-export type SomeType = any;
+export type SuiOutKitMode = "local" | "test" | "live";
+
+export interface SuiOutKitConfig {
+  merchantAddress: string;
+  mode?: SuiOutKitMode;
+  backendUrl?: string;
+}
 
 export interface SupportedCoin {
   symbol: string;

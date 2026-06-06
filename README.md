@@ -37,6 +37,7 @@ Quick links to common helpers and implementation entry points used by integrator
        - [backend/src/index.ts](backend/src/index.ts) - HTTP entry (Express app)
        - [backend/src/routes/checkout.ts](backend/src/routes/checkout.ts) - session, charge, webhook handlers
        - [backend/src/routes/payments.ts](backend/src/routes/payments.ts) - SSE payment stream
+       - [backend/src/config/coins.ts](backend/src/config/coins.ts) - multi-token config loader
        - [backend/src/services/sui.ts](backend/src/services/sui.ts) - on-chain interaction and settlement helpers
        - [backend/src/services/walrus.ts](backend/src/services/walrus.ts) - invoice upload helper
        - [backend/src/services/redis.ts](backend/src/services/redis.ts) - session store and locks
@@ -60,11 +61,11 @@ npm install suioutkit
 import { SuiOutKit } from "suioutkit";
 
 const sdk = new SuiOutKit({ merchantAddress: "0xYOUR_MERCHANT_SUI_ADDRESS" });
-const session = await sdk.initCheckout({ amount: 45000, currency: "NGN" });
+const session = await sdk.initCheckout({ amount: 45000, currency: "NGN", coinType: "0x2::sui::SUI" });
 sdk.openModal(session);
 ```
 
-Hosted API: **https://api.suioutkit.xyz** · routes: **`/v1/checkout/*`** · [Hosted API](docs/hosted-api.md)
+Hosted API: **https://api.suioutkit.xyz** (`mode: "live"` default) · routes: **`/v1/checkout/*`** · [Hosted API](docs/hosted-api.md)
 
 ### Contributors (local stack)
 
@@ -76,7 +77,7 @@ cp backend/.env.example backend/.env
 docker compose up --build
 ```
 
-SDK override: `backendUrl: "http://localhost:5000"` (same `/v1/*` paths).
+SDK override: `mode: "local"` (localhost:5000, testnet) or `mode: "test"` (staging, testnet).
 
 ### Demo
 
@@ -131,8 +132,8 @@ suioutkit/
 
 High-level security guidance is summarized here; see the linked documents for full operator and reporting procedures:
 
-- [SECURITY.md](SECURITY.md) — how to report vulnerabilities and the preferred private contact.
-- [docs/guides/security.md](/docs/guides/security.md) — production security practices and operator hardening checklist.
+- [SECURITY.md](SECURITY.md) - how to report vulnerabilities and the preferred private contact.
+- [docs/guides/security.md](/docs/guides/security.md) - production security practices and operator hardening checklist.
 
 ## Contributing
 

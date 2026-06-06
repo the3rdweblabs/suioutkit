@@ -23,6 +23,7 @@ export function PayButton() {
     const session = await sdk.initCheckout({
       amount: 45000,
       currency: "NGN",
+      coinType: "0x2::sui::SUI",  // optional
       metadata: { orderId: "ORDER-123" },
     });
     sdk.openModal(session);
@@ -33,12 +34,12 @@ export function PayButton() {
 ```
 
 No server setup is required on your side - the SDK uses the hosted SuiOutKit API by default.
-For local development you can point the SDK at a local backend instance:
+For local development use `mode: "local"` (or override with `backendUrl`):
 
 ```ts
 const sdk = new SuiOutKit({
   merchantAddress: "0xYOUR_MERCHANT_SUI_ADDRESS",
-  backendUrl: "http://localhost:5000",
+  mode: "local",
 });
 ```
 
@@ -50,13 +51,14 @@ Ensure `merchantAddress` is your merchant Sui address (required).
 sdk.wrapButton("#pay-btn", {
   amount: 45000,
   currency: "NGN",
+  coinType: "0x2::sui::SUI",  // optional
 });
 ```
 
 ## What happens
 
 1. You call `initCheckout` - the SDK creates a session.
-2. The customer pays in the modal (bank, OPay, card, or wallet).
+2. The customer pays in the modal (bank, OPay, card, wallet, or outPay QR).
 3. SuiOutKit completes settlement on Sui; the modal polls until done.
 
 ## Next
