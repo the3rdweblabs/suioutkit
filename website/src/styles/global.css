@@ -1118,15 +1118,78 @@ pre {
   }
 
   .docs-sidebar {
-    position: relative;
+    position: fixed;
     top: 0;
-    height: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
+    left: 0;
+    bottom: 0;
+    z-index: 200;
+    width: 280px;
+    height: 100vh;
+    border-right: 1px solid var(--border);
+    background: var(--bg);
+    padding: 76px 12px 48px;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+
+  .docs-sidebar--open {
+    transform: translateX(0);
+  }
+
+  .docs-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 199;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .docs-overlay--visible {
+    display: block;
+  }
+
+  .docs-menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 16px 20px 0;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 14px;
+    font-family: var(--font-sans);
+    cursor: pointer;
+  }
+
+  .docs-menu-toggle:hover {
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+
+  .docs-main-wrap {
+    grid-template-columns: 1fr;
+  }
+
+  .docs-main {
+    padding: 20px 20px 56px;
   }
 
   .site-header__link--text {
     display: none;
+  }
+
+  .site-header__nav-left,
+  .site-header__nav-right {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .site-header__link {
+    padding: 6px 8px;
+    font-size: 13px;
   }
 
   /* Improve header layout on small screens */
@@ -1178,37 +1241,9 @@ pre {
   }
 }
 
-/* Responsive header adjustments (no mobile overlay) */
-@media (max-width: 768px) {
-  .site-header__nav {
-    gap: 8px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
-  .site-header__nav-left {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  }
-
-  .site-header__link {
-    padding: 6px 8px;
-    font-size: 13px;
-  }
-
-  /* keep icons visible, hide link text to save space */
-  .site-header__link--text {
+/* Hide mobile menu toggle on screens wider than 768px */
+@media (min-width: 769px) {
+  .docs-menu-toggle {
     display: none;
-  }
-
-  .site-header__cta {
-    display: none;
-  }
-
-  .site-header__icon-link,
-  .theme-toggle {
-    width: 36px;
-    height: 36px;
   }
 }

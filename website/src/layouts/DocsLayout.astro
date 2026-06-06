@@ -16,10 +16,42 @@ const { title, description, headings = [] } = Astro.props;
   <div class="docs-shell">
     <DocsSidebar />
     <div class="docs-main-wrap">
+      <button class="docs-menu-toggle" aria-label="Toggle docs menu" aria-expanded="false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+        <span>Menu</span>
+      </button>
       <article class="docs-main prose">
         <slot />
       </article>
       <DocsToc headings={headings} />
     </div>
   </div>
+  <div class="docs-overlay"></div>
+  <script>
+    const toggle = document.querySelector(".docs-menu-toggle");
+    const sidebar = document.querySelector(".docs-sidebar");
+    const overlay = document.querySelector(".docs-overlay");
+    if (toggle && sidebar && overlay) {
+      function close() {
+        sidebar.classList.remove("docs-sidebar--open");
+        overlay.classList.remove("docs-overlay--visible");
+        toggle.setAttribute("aria-expanded", "false");
+        document.body.style.overflow = "";
+      }
+      toggle.addEventListener("click", () => {
+        const isOpen = sidebar.classList.toggle("docs-sidebar--open");
+        overlay.classList.toggle("docs-overlay--visible", isOpen);
+        toggle.setAttribute("aria-expanded", String(isOpen));
+        document.body.style.overflow = isOpen ? "hidden" : "";
+      });
+      overlay.addEventListener("click", close);
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") close();
+      });
+    }
+  </script>
 </BaseLayout>
