@@ -10,7 +10,7 @@ Author: @CYBWithFlourish (https://github.com/CYBWithFlourish)
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SuiOutKit SDK Demo</title>
-  <link rel="stylesheet" href="http://localhost:5000/style.css">
+  <link rel="stylesheet" href="https://api.staging.suioutkit.xyz/style.css">
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     body {
@@ -120,8 +120,8 @@ Author: @CYBWithFlourish (https://github.com/CYBWithFlourish)
     <span class="badge">SuiOutKit Demo</span>
     <h1>Trion Storefront</h1>
     <p>
-      This page loads the SDK from the backend, creates a checkout session, and opens the live modal.
-      Backend: <code>http://localhost:5000</code>
+      This page loads the SDK from CDN, creates a checkout session, and opens the live modal.
+      Backend: <code>https://api.staging.suioutkit.xyz</code>
     </p>
 
     <div class="row">
@@ -133,9 +133,9 @@ Author: @CYBWithFlourish (https://github.com/CYBWithFlourish)
   </main>
 
   <script type="module">
-    const BACKEND_URL = "http://localhost:5000";
+    const BACKEND_URL = "https://api.staging.suioutkit.xyz";
     const MERCHANT_ADDRESS = "0x534e227f48fc630b92298948ee57b75db82e7388896f4eefe34e040494f61581";
-    const SDK_URL = `${BACKEND_URL}/sdk/dist/index.js`;
+    const SDK_URL = "https://unpkg.com/suioutkit@1.2.0/dist/index.js";
 
     const statusEl = document.getElementById("status");
     const checkoutBtn = document.getElementById("checkout-btn");
@@ -179,7 +179,7 @@ Author: @CYBWithFlourish (https://github.com/CYBWithFlourish)
 
       try {
         const SuiOutKit = await loadSdk();
-        sdk = new SuiOutKit({ merchantAddress: MERCHANT_ADDRESS, mode: "local" });
+        sdk = new SuiOutKit({ merchantAddress: MERCHANT_ADDRESS, mode: "test" });
         checkoutBtn.disabled = false;
         checkoutBtn.textContent = "Pay ₦1000";
         statusEl.textContent = `SDK loaded from ${SDK_URL}\nMerchant: ${MERCHANT_ADDRESS}`;
