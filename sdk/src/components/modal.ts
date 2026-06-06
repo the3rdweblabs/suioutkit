@@ -835,7 +835,7 @@ export class SuiOutKitModal {
     }
 
     const paymentUri = this.buildPaymentUri(this.cryptoIntent);
-    const qrCodeUrl = await QRCode.toDataURL(paymentUri, { width: 180, margin: 1 });
+    const qrCodeUrl = await QRCode.toDataURL(paymentUri, { width: 300, margin: 2 });
 
     container.innerHTML = `
       <button class="suioutkit-back" id="sok-back-btn">← Back to Sui options</button>

@@ -428,20 +428,20 @@
 
 .sok-qr-frame {
   background: #ffffff;
-  padding: 10px;
+  padding: 12px;
   border-radius: 14px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   position: relative;
   overflow: hidden;
   margin-bottom: 10px;
-  width: 180px;
-  height: 180px;
+  width: 260px;
+  height: 260px;
   box-sizing: border-box;
 }
 
 .sok-qr-img {
-  width: 160px;
-  height: 160px;
+  width: 236px;
+  height: 236px;
   display: block;
 }
 
@@ -742,13 +742,13 @@
   }
 
   .sok-qr-frame {
-    width: 160px;
-    height: 160px;
+    width: 220px;
+    height: 220px;
   }
 
   .sok-qr-img {
-    width: 140px;
-    height: 140px;
+    width: 196px;
+    height: 196px;
   }
 
   .sok-success-details {
