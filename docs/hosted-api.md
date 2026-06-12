@@ -9,9 +9,11 @@ SuiOutKit is offered as **SDK + hosted backend**. Merchants integrate with `npm 
 
 | Environment | Origin | Mode | Sui network |
 |-------------|--------|------|-------------|
-| **Production** | `https://api.suioutkit.xyz` | `"live"` (default) | mainnet |
+| **Production** (planned) | `https://api.suioutkit.xyz` | `"live"` (default) | mainnet |
 | **Staging** | `https://api.staging.suioutkit.xyz` | `"test"` | testnet |
 | **Local** | `http://localhost:5000` | `"local"` | testnet |
+
+Currently operating on **Testnet**. The `"live"` endpoint maps to Mainnet for production go-live.
 
 All checkout and payment routes are versioned under **`/v1/`**.
 
@@ -89,17 +91,17 @@ Merchants do **not** need to clone this repo, run Docker, or manage `backend/.en
 
 ## Operator deployment checklist
 
-- DNS: point `api.suioutkit.xyz` to your load balancer/ingress
+- DNS: point `api.suioutkit.xyz` to your load balancer/ingress (for go-live)
 - Obtain and deploy a TLS certificate for the API hostname
 - Run the backend and Redis with production-grade secret management (vaults, K8s/Docker secrets)
 - Configure and fund the treasury; set contract IDs and operator keys in the environment
 - Configure provider webhooks to point to the production host:
   - Flutterwave: `https://api.suioutkit.xyz/v1/checkout/webhook`
   - Stripe: `https://api.suioutkit.xyz/v1/checkout/stripe-webhook`
-- Perform a smoke test:
+- Perform a smoke test (staging):
 
 ```bash
-curl -sS https://api.suioutkit.xyz/health
+curl -sS https://api.staging.suioutkit.xyz/health
 ```
 
 ### Self-hosting (operators only)

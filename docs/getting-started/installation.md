@@ -10,7 +10,7 @@ SuiOutKit is a **drop-in checkout SDK** for Sui merchants. Install the npm packa
 
 Stop stitching payment providers together. SuiOutKit is a single SDK that brings checkout, settlement, and receipts into one integration.
 
-No server setup required: merchants only install the SDK - the hosted API (`https://api.suioutkit.xyz`, routes `/v1/`) handles sessions, webhooks, and settlement.
+No server setup required: merchants only install the SDK - the hosted API handles sessions, webhooks, and settlement. Currently running on testnet (`https://api.staging.suioutkit.xyz`, routes `/v1/`), with mainnet planned for production go-live (`https://api.suioutkit.xyz`, routes `/v1/`).
 
 ## Prerequisites
 

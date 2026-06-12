@@ -5,7 +5,7 @@ description: Platform architecture, API contract, environment variables, and CI 
 
 This guide explains how the SuiOutKit platform is structured and how the SDK communicates with the backend during checkout and settlement.
 
-**Merchants** use the hosted API at `https://api.suioutkit.xyz` with routes under `/v1/` (SDK `mode: "live"` default). See [Hosted API](/docs/hosted-api) for the deploy checklist and route map.
+**Merchants** use the hosted API - currently `https://api.staging.suioutkit.xyz` (testnet), with `https://api.suioutkit.xyz` (mainnet) planned for production go-live. Routes under `/v1/` (SDK `mode: "live"` default). See [Hosted API](/docs/hosted-api) for the deploy checklist and route map.
 
 ## Overview
 SuiOutKit is a settlement system for payment methods that eventually resolve into Sui-based settlement. Developers integrate the browser SDK published as [`suioutkit`](https://www.npmjs.com/package//suioutkit), while the backend handles payment provider calls, treasury validation, receipt storage, and on-chain settlement.

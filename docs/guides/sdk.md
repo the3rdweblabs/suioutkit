@@ -10,7 +10,7 @@ npm install suioutkit
 ```
 
 Drop-in checkout for your site - no backend to deploy. See [Installation](/docs/getting-started/installation).
-The SDK defaults to `mode: "live"` (hosted API at `https://api.suioutkit.xyz`, mainnet). Use `mode: "local"` or `mode: "test"` for development.
+The SDK defaults to `mode: "live"` (hosted API at `https://api.suioutkit.xyz`, mainnet when live). Currently operating on testnet - use `mode: "test"` for staging or `mode: "local"` for local development.
 
 ## Constructor
 

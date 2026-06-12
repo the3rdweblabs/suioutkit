@@ -3,7 +3,8 @@ title: Backend API
 description: HTTP endpoints used by the SDK and payment providers.
 ---
 
-**Host:** `https://api.suioutkit.xyz`  
+**Host (production, planned):** `https://api.suioutkit.xyz`  
+**Host (current):** `https://api.staging.suioutkit.xyz`  
 **Base path:** `/v1/checkout` (unless noted). Note: a few endpoints live under `/v1/payments` (SSE) or the root (`/health`).
 
 These routes are called by the SDK during checkout. Merchants integrating the SDK do not need to implement these endpoints - use `initCheckout`, `openModal`, and related SDK methods. The API reference below is useful when building a custom UI or integrating directly with the hosted service.
