@@ -12,14 +12,18 @@ const REDIS_URL = getEnv("REDIS_URL", "redis://localhost:6379");
 const REDIS_HOST = getEnv("REDIS_HOST", "localhost");
 const REDIS_PORT = parseInt(getEnv("REDIS_PORT", "6379"), 10);
 const REDIS_PASSWORD = getEnv("REDIS_PASSWORD", "");
-const REDIS_TLS_ENABLED = getEnv("REDIS_TLS_ENABLED", "true") !== "false";
+const REDIS_TLS_ENABLED = getEnv("REDIS_TLS_ENABLED", "false") !== "false";
 const SESSION_TTL = parseInt(getEnv("SESSION_TTL", "86400"), 10); // 24 hours
+const MAX_RETRIES = 20;
 
 function buildOptions(): RedisOptions {
   const opts: RedisOptions = {
-    maxRetriesPerRequest: 3,
-    retryStrategy: (times: number) => Math.min(times * 100, 2000),
-    enableReadyCheck: true,
+    maxRetriesPerRequest: MAX_RETRIES,
+    retryStrategy: (times: number) => {
+      if (times > MAX_RETRIES) return null;
+      return Math.min(times * 200, 5000);
+    },
+    enableReadyCheck: false,
     lazyConnect: false,
   };
 
@@ -35,7 +39,27 @@ function buildOptions(): RedisOptions {
     return opts;
   }
 
+  if (REDIS_MODE === "demo") {
+    // Use a single connection URL - either REDIS_URL or REDIS_HOST if it's a full URL
+    const url = REDIS_HOST.startsWith("redis://") || REDIS_HOST.startsWith("rediss://")
+      ? REDIS_HOST
+      : REDIS_URL;
+    if (url.startsWith("rediss://") || REDIS_TLS_ENABLED) {
+      opts.tls = {};
+    }
+    return opts;
+  }
+
+  // local mode - uses REDIS_URL (defaults to redis://localhost:6379 for Docker)
+  // TLS only from the URL scheme, never from REDIS_TLS_ENABLED (that's for live mode)
+  if (REDIS_URL.startsWith("rediss://")) {
+    opts.tls = {};
+  }
   return opts;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 class RedisService {
@@ -46,10 +70,13 @@ class RedisService {
 
     if (REDIS_MODE === "live") {
       this.client = new Redis(options);
+    } else if (REDIS_MODE === "demo") {
+      const url = REDIS_HOST.startsWith("redis://") || REDIS_HOST.startsWith("rediss://")
+        ? REDIS_HOST
+        : REDIS_URL;
+      this.client = new Redis(url, options);
     } else {
-      if (REDIS_URL.startsWith("rediss://")) {
-        options.tls = {};
-      }
+      // local mode - Docker Redis on default localhost:6379
       this.client = new Redis(REDIS_URL, options);
     }
 
@@ -62,27 +89,39 @@ class RedisService {
     });
   }
 
+  private async withRetry<T>(fn: () => Promise<T>, operation: string, maxRetries = 3): Promise<T> {
+    let lastError: Error | null = null;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (err: any) {
+        lastError = err;
+        if (attempt < maxRetries) {
+          const delay = Math.min(attempt * 200, 2000);
+          logger.warn("REDIS", `${operation} attempt ${attempt}/${maxRetries} failed: ${err.message}, retrying in ${delay}ms`);
+          await sleep(delay);
+        }
+      }
+    }
+    throw lastError || new Error(`${operation} failed after ${maxRetries} retries`);
+  }
+
   public async setSession(nonce: string, sessionData: any): Promise<void> {
-    try {
+    await this.withRetry(async () => {
       await this.client.set(
         `sok:session:${nonce}`,
         JSON.stringify(sessionData),
         "EX",
         SESSION_TTL
       );
-    } catch (err: any) {
-      logger.error("REDIS", `Failed to set session for ${nonce}: ${err.message}`);
-    }
+    }, `setSession(${nonce})`);
   }
 
   public async getSession(nonce: string): Promise<any | null> {
-    try {
+    return this.withRetry(async () => {
       const data = await this.client.get(`sok:session:${nonce}`);
       return data ? JSON.parse(data) : null;
-    } catch (err: any) {
-      logger.error("REDIS", `Failed to get session for ${nonce}: ${err.message}`);
-      return null;
-    }
+    }, `getSession(${nonce})`);
   }
 
   public async updateSessionStatus(
@@ -90,7 +129,7 @@ class RedisService {
     status: "PENDING" | "PROCESSING" | "SETTLED" | "EXPIRED",
     additionalData: Record<string, any> = {}
   ): Promise<void> {
-    try {
+    await this.withRetry(async () => {
       const session = await this.getSession(nonce);
       if (!session) {
         logger.warn("REDIS", `Cannot update status for missing session: ${nonce}`);
@@ -131,9 +170,7 @@ class RedisService {
         logger.warn("REDIS", `Optimistic lock failed for ${nonce}; retrying`);
         return this.updateSessionStatus(nonce, status, additionalData);
       }
-    } catch (err: any) {
-      logger.error("REDIS", `Failed to update session status for ${nonce}: ${err.message}`);
-    }
+    }, `updateSessionStatus(${nonce})`);
   }
 
   public getClient(): Redis {

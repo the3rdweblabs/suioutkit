@@ -13,16 +13,16 @@ import { getEnv } from "../config/env.js";
 import { getDefaultCoin } from "../config/coins.js";
 
 // Contract Object IDs and config loaded safely from environment
-const SUI_GRPC_ENDPOINT = getEnv("SUI_GRPC_ENDPOINT", "https://fullnode.testnet.sui.io:443");
-const SUI_RPC_ENDPOINT = getEnv("SUI_RPC_ENDPOINT", "https://fullnode.testnet.sui.io:443");
-const PACKAGE_ID = getEnv("PACKAGE_ID");
-const TREASURY_ID = getEnv("TREASURY_ID");
-const FIAT_REGISTRY_ID = getEnv("FIAT_REGISTRY_ID");
-const FIAT_REGISTRY_ADMIN_CAP_ID = getEnv("FIAT_REGISTRY_ADMIN_CAP_ID");
-const CRYPTO_REGISTRY_ID = getEnv("CRYPTO_REGISTRY_ID");
-const CRYPTO_REGISTRY_ADMIN_CAP_ID = getEnv("CRYPTO_REGISTRY_ADMIN_CAP_ID");
-const SUI_OPERATOR_PRIVATE_KEY = getEnv("SUI_OPERATOR_PRIVATE_KEY");
 const SUI_NETWORK = getEnv("SUI_NETWORK", "testnet") as any;
+const SUI_GRPC_ENDPOINT = getEnv(`SUI_GRPC_ENDPOINT_${SUI_NETWORK}`) || getEnv("SUI_GRPC_ENDPOINT", `https://fullnode.${SUI_NETWORK}.sui.io:443`);
+const SUI_RPC_ENDPOINT = getEnv(`SUI_RPC_ENDPOINT_${SUI_NETWORK}`) || getEnv("SUI_RPC_ENDPOINT", `https://fullnode.${SUI_NETWORK}.sui.io:443`);
+const SUI_OPERATOR_PRIVATE_KEY = getEnv("SUI_OPERATOR_PRIVATE_KEY");
+const PACKAGE_ID = getEnv(`PACKAGE_ID_${SUI_NETWORK}`);
+const TREASURY_ID = getEnv(`TREASURY_ID_${SUI_NETWORK}`);
+const FIAT_REGISTRY_ID = getEnv(`FIAT_REGISTRY_ID_${SUI_NETWORK}`);
+const FIAT_REGISTRY_ADMIN_CAP_ID = getEnv(`FIAT_REGISTRY_ADMIN_CAP_ID_${SUI_NETWORK}`);
+const CRYPTO_REGISTRY_ID = getEnv(`CRYPTO_REGISTRY_ID_${SUI_NETWORK}`);
+const CRYPTO_REGISTRY_ADMIN_CAP_ID = getEnv(`CRYPTO_REGISTRY_ADMIN_CAP_ID_${SUI_NETWORK}`);
 const PAYMENT_KIT_PACKAGE_ID = getEnv(`PAYMENT_KIT_PACKAGE_ID_${SUI_NETWORK}`);
 
 class SuiIntegrationService {
@@ -89,9 +89,6 @@ class SuiIntegrationService {
     try {
       const tx = new Transaction();
 
-      // Set gas budget safely
-      tx.setGasBudget(80_000_000); // 0.08 SUI
-
       // Build checkout::settle_fiat<T> call. The contract releases funds from
       // Treasury to the merchant, then returns a non-droppable receipt object.
       const [receipt] = tx.moveCall({
@@ -112,35 +109,52 @@ class SuiIntegrationService {
       // inside checkout::settle_fiat via Payment Kit.
       tx.transferObjects([receipt], merchantAddress);
 
-      console.log(`SuiOutKit: Firing settle_fiat<${tokenType}> transaction block on-chain...`);
+      // Derive gas budget via dry-run for accurate cost estimation
+      const builtBytes = await tx.build({ client: this.client as any });
+      const dryRunResult = await (this.client as any).dryRunTransactionBlock({
+        transactionBlock: builtBytes,
+      });
+      const gasUsed = dryRunResult?.effects?.gasUsed;
+      let gasBudget = 80_000_000; // safe fallback
+      if (gasUsed) {
+        const computedCost = BigInt(gasUsed.computationCost || 0);
+        const storageCost = BigInt(gasUsed.storageCost || 0);
+        const storageRebate = BigInt(gasUsed.storageRebate || 0);
+        const estimated = computedCost + storageCost - storageRebate;
+        // Add 30% buffer for dry-run vs actual variance
+        gasBudget = Number((estimated * BigInt(130)) / BigInt(100));
+        if (gasBudget < 50_000_000) gasBudget = 50_000_000;
+      }
+      tx.setGasBudget(gasBudget);
+
+      console.log(`SuiOutKit: Firing settle_fiat<${tokenType}> transaction block on-chain (gas budget: ${gasBudget})...`);
       const response: any = await (this.client as any).signAndExecuteTransaction({
         signer: this.keypair,
         transaction: tx,
-        options: {
-          showEffects: true,
-          showEvents: true
+        include: {
+          effects: true,
+          events: true
         }
       });
 
-      const txDigest =
-        response?.digest ||
-        response?.transactionDigest ||
-        response?.Transaction?.digest ||
-        response?.FailedTransaction?.digest;
+      const txResult = response?.Transaction || response?.FailedTransaction || response;
+      const txDigest = txResult?.digest || response?.digest;
+      const execStatus = txResult?.status?.success ? "success" : undefined;
 
-      const executionStatus =
-        response?.effects?.status?.status ||
-        response?.Transaction?.status?.success ||
-        response?.FailedTransaction?.status?.success;
-
-      if (response?.$kind === "Transaction" || response?.Transaction?.status?.success || executionStatus === "success") {
-        console.log(`SuiOutKit: Settle Fiat Tx succeeded. Digest: ${txDigest || response?.digest}`);
+      if (execStatus === "success" && txDigest) {
+        console.log(`SuiOutKit: Settle Fiat Tx succeeded. Digest: ${txDigest}`);
+        try {
+          await (this.client as any).waitForTransaction?.({ digest: txDigest, include: { effects: true, events: true } });
+        } catch (_) {
+          // non-critical; fullnode will eventually index it
+        }
         return {
-          txDigest: txDigest || response?.digest,
+          txDigest,
           status: "success"
         };
       }
 
+      // Fallback: if status wasn't success but we have a digest, verify on-chain
       if (txDigest) {
         try {
           await (this.client as any).waitForTransaction?.({ digest: txDigest, include: { effects: true, events: true } });
@@ -161,10 +175,6 @@ class SuiIntegrationService {
       }
 
       const failureMessage =
-        response?.FailedTransaction?.status?.error?.message ||
-        response?.FailedTransaction?.status?.error ||
-        response?.Transaction?.status?.error?.message ||
-        response?.Transaction?.status?.error ||
         response?.effects?.status?.error ||
         "Transaction block failed execution on-chain.";
 
@@ -189,26 +199,16 @@ class SuiIntegrationService {
     tokenType: string
   ): Promise<{ verified: boolean; eventType?: string }> {
     try {
-      const response = await fetch(SUI_RPC_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "sui_getTransactionBlock",
-          params: [txDigest, { showEvents: true }]
-        })
+      const txBlock = await (this.client as any).getTransaction({
+        digest: txDigest,
+        include: { events: true },
       });
 
-      const data: any = await response.json();
-      if (data.error) {
-        return { verified: false };
-      }
-
-      const events = data.result?.events || [];
+      const txResult = txBlock?.Transaction || txBlock;
+      const events = txResult?.events || [];
       for (const evt of events) {
-        const evtType = evt.type || "";
-        const parsed = evt.parsedJson || {};
+        const evtType = evt.eventType || "";
+        const parsed = evt.json || {};
         const nonce = parsed.nonce || parsed.nonce_str || parsed.nonceString;
         const merchant = parsed.merchant || parsed.merchantAddress;
         const amount = Number(parsed.amount ?? parsed.amountNaira ?? parsed.amountSettled ?? 0);
@@ -303,26 +303,16 @@ class SuiIntegrationService {
     }
 
     try {
-      const response = await fetch(SUI_RPC_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "sui_getTransactionBlock",
-          params: [txDigest, { showEvents: true }]
-        })
+      const txBlock = await (this.client as any).getTransaction({
+        digest: txDigest,
+        include: { events: true },
       });
 
-      const data: any = await response.json();
-      if (data.error) {
-        throw new Error(data.error.message || "Failed to fetch transaction block");
-      }
-
-      const events = data.result?.events || [];
+      const txResult = txBlock?.Transaction || txBlock;
+      const events = txResult?.events || [];
       for (const evt of events) {
-        const evtType = evt.type || "";
-        const parsed = evt.parsedJson || {};
+        const evtType = evt.eventType || "";
+        const parsed = evt.json || {};
         const nonce = parsed.nonce || parsed.nonce_str || parsed.nonceString;
 
         if (nonce === expectedNonce) {

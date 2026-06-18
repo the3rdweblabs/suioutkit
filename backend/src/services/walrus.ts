@@ -21,16 +21,16 @@ export interface WalrusInvoiceData {
   timestamp: string;
 }
 
-const WALRUS_PUBLISHER_URL = getEnv("WALRUS_PUBLISHER_URL", "https://publisher.walrus-testnet.walrus.space");
+const SUI_NETWORK = getEnv("SUI_NETWORK", "testnet") as "mainnet" | "testnet";
+const WALRUS_PUBLISHER_URL = getEnv(`WALRUS_PUBLISHER_URL_${SUI_NETWORK}`) || getEnv("WALRUS_PUBLISHER_URL", `https://publisher.walrus-${SUI_NETWORK}.walrus.space`);
+const WALRUS_UPLOAD_RELAY_URL = getEnv(`WALRUS_UPLOAD_RELAY_URL_${SUI_NETWORK}`) || getEnv("WALRUS_UPLOAD_RELAY_URL", `https://upload-relay.${SUI_NETWORK}.walrus.space`);
 const WALRUS_OPERATOR_PRIVATE_KEY = getEnv("WALRUS_OPERATOR_PRIVATE_KEY");
 const WALRUS_UPLOAD_MODE = getEnv("WALRUS_UPLOAD_MODE", "publisher");
 const WALRUS_EPOCHS = parsePositiveInteger(getEnv("WALRUS_EPOCHS", "5"), 5);
 const WALRUS_DELETABLE = getEnv("WALRUS_DELETABLE", "false").toLowerCase() === "true";
 const WALRUS_USE_UPLOAD_RELAY = getEnv("WALRUS_USE_UPLOAD_RELAY", "false").toLowerCase() === "true";
-const WALRUS_UPLOAD_RELAY_URL = getEnv("WALRUS_UPLOAD_RELAY_URL", "https://upload-relay.testnet.walrus.space");
 const WALRUS_UPLOAD_RELAY_MAX_TIP = parsePositiveInteger(getEnv("WALRUS_UPLOAD_RELAY_MAX_TIP", "1000"), 1000);
-const SUI_RPC_ENDPOINT = getEnv("SUI_RPC_ENDPOINT", "https://fullnode.testnet.sui.io:443");
-const SUI_NETWORK = getEnv("SUI_NETWORK", "testnet") as "mainnet" | "testnet";
+const SUI_RPC_ENDPOINT = getEnv(`SUI_RPC_ENDPOINT_${SUI_NETWORK}`) || getEnv("SUI_RPC_ENDPOINT", `https://fullnode.${SUI_NETWORK}.sui.io:443`);
 
 function parsePositiveInteger(value: string, fallback: number): number {
   const parsed = Number.parseInt(value, 10);
@@ -79,9 +79,8 @@ class WalrusService {
   }
 
   /**
-   * Uploads a structured JSON invoice/receipt to Walrus decentralized storage.
-   * If WALRUS_OPERATOR_PRIVATE_KEY is present, cryptographically signs the invoice before storing.
-   * Epoch retention defaults to 5 epochs.
+   * Computes the blob ID for invoice data without storing (SDK mode).
+   * Throws if not in SDK mode - use resolveBlobId for fallback.
    */
   public async prepareInvoice(invoiceData: WalrusInvoiceData): Promise<{ blobId: string; invoiceData: WalrusInvoiceData }> {
     if (WALRUS_UPLOAD_MODE !== "sdk") {
@@ -107,6 +106,28 @@ class WalrusService {
     };
   }
 
+  /**
+   * Resolves a blob ID for invoice data, preferring prepare (0 cost) in SDK mode
+   * but falling back to upload in publisher mode.
+   * Returns the blobId and a flag indicating if storage was already committed.
+   */
+  public async resolveBlobId(invoiceData: WalrusInvoiceData): Promise<{ blobId: string; alreadyStored: boolean }> {
+    if (WALRUS_UPLOAD_MODE === "sdk") {
+      const prepared = await this.prepareInvoice(invoiceData);
+      return { blobId: prepared.blobId, alreadyStored: false };
+    }
+    // Publisher mode: must upload to get blobId
+    const blobId = await this.uploadInvoice(invoiceData);
+    return { blobId, alreadyStored: true };
+  }
+
+  /**
+   * Uploads a structured JSON invoice/receipt to Walrus decentralized storage.
+   * In SDK mode, this is called AFTER a successful PTB to commit the blob.
+   * In publisher mode, this is called BEFORE to get the blobId.
+   * If WALRUS_OPERATOR_PRIVATE_KEY is present, cryptographically signs the invoice before storing.
+   * Epoch retention defaults to 5 epochs.
+   */
   public async uploadInvoice(invoiceData: WalrusInvoiceData): Promise<string> {
     const payloadString = await this.createPayloadString(invoiceData);
 
