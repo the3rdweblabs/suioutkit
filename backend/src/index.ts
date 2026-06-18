@@ -50,6 +50,8 @@ const sdkAssetsPath = path.join(__dirname, "../../sdk/assets");
 app.use("/assets", express.static(sdkAssetsPath));
 
 // Also support serving from public or local dist if deployed in package
+app.use("/demo", express.static(path.join(__dirname, "../../demo")));
+
 app.get("/style.css", (req, res) => {
   res.sendFile(path.join(sdkStylesPath, "style.css"), (err) => {
     if (err) {
@@ -120,8 +122,23 @@ suiService.startIndexer(async (event) => {
     logger.info("INDEXER", `Auto-settling crypto payment for nonce ${nonce}`);
 
     let walrusBlobId = session.cryptoWalrusBlobId || session.walrusBlobId;
+    let walrusAlreadyStored = !!walrusBlobId;
+
     if (!walrusBlobId && session.cryptoWalrusInvoice) {
-      walrusBlobId = await walrusService.uploadInvoice(session.cryptoWalrusInvoice);
+      // Resolve blob ID (prepare in SDK mode, upload in publisher mode)
+      const resolved = await walrusService.resolveBlobId(session.cryptoWalrusInvoice);
+      walrusBlobId = resolved.blobId;
+      walrusAlreadyStored = resolved.alreadyStored;
+    }
+
+    // On-chain event confirmed — commit Walrus blob if only prepared (SDK mode)
+    if (!walrusAlreadyStored && walrusBlobId && session.cryptoWalrusInvoice) {
+      try {
+        await walrusService.uploadInvoice(session.cryptoWalrusInvoice);
+        logger.success("INDEXER", `Walrus receipt committed after on-chain event: ${walrusBlobId}`);
+      } catch (walrusErr: any) {
+        logger.error("INDEXER", `Walrus post-event commit failed for ${nonce}: ${walrusErr.message}`);
+      }
     }
 
     await redisService.updateSessionStatus(nonce, "SETTLED", {

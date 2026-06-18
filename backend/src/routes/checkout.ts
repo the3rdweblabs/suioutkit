@@ -22,8 +22,9 @@ import { getDefaultCoin, getCoinConfig, getSupportedCoinList, toBaseUnits, fromB
 const router = Router();
 
 // Load FX and Webhook configurations
-const PACKAGE_ID = getEnv("PACKAGE_ID");
-const CRYPTO_REGISTRY_ID = getEnv("CRYPTO_REGISTRY_ID");
+const SUI_NETWORK = getEnv("SUI_NETWORK", "testnet") as any;
+const PACKAGE_ID = getEnv(`PACKAGE_ID_${SUI_NETWORK}`);
+const CRYPTO_REGISTRY_ID = getEnv(`CRYPTO_REGISTRY_ID_${SUI_NETWORK}`);
 const CRYPTO_REGISTRY_NAME = getEnv("CRYPTO_REGISTRY_NAME", "suioutkit-crypto-settlements");
 
 function normalizeMerchantAddress(address: string) {
@@ -401,9 +402,23 @@ router.post("/crypto/confirm", async (req: Request, res: Response) => {
     };
 
     let walrusBlobId = session.cryptoWalrusBlobId || session.walrusBlobId;
+    let walrusAlreadyStored = !!session.cryptoWalrusUploadedAt;
 
-    if (!session.cryptoWalrusUploadedAt) {
-      walrusBlobId = await walrusService.uploadInvoice(invoiceMetadata);
+    if (!walrusBlobId) {
+      // Prepare blob ID without storing first (SDK mode) or store now (publisher mode)
+      const resolved = await walrusService.resolveBlobId(invoiceMetadata);
+      walrusBlobId = resolved.blobId;
+      walrusAlreadyStored = resolved.alreadyStored;
+    }
+
+    // On-chain payment is already verified — commit Walrus blob if not yet stored
+    if (!walrusAlreadyStored && walrusBlobId) {
+      try {
+        await walrusService.uploadInvoice(invoiceMetadata);
+      } catch (walrusErr: any) {
+        logger.error("CHECKOUT", `Walrus post-verification commit failed for ${nonce}: ${walrusErr.message}`);
+        // Non-fatal: blob ID is deterministic; can be uploaded later
+      }
     }
 
     await redisService.updateSessionStatus(session.nonce, "SETTLED", {
@@ -520,11 +535,11 @@ router.post("/webhook", validateWebhookAuth, async (req: Request, res: Response)
 
     const decimals = getDecimals(sessionCoinType);
     const settlementAmount = Math.floor((amount / currentRate) * 10 ** decimals);
-    // Variable to hold the Walrus blob ID (may be reused across retries)
     let walrusBlobId: string;
+    let walrusAlreadyStored = false;
     logger.info("WEBHOOK", `Settlement calculation: ₦${amount} @ ₦${currentRate}/token = ${settlementAmount / 10 ** decimals} token(s)`);
 
-    // 2. Upload proof-of-payment invoice metadata anonymously to Walrus (idempotent) with Redis lock
+    // 2. Resolve Walrus blob ID (prepare in SDK mode, upload in publisher mode) with Redis lock
     const lockKey = `uploadLock:${session.nonce}`;
     let lockOwner: string | null = null;
     try {
@@ -533,14 +548,20 @@ router.post("/webhook", validateWebhookAuth, async (req: Request, res: Response)
         console.warn(`Upload lock not acquired for ${session.nonce}; assuming another worker is handling it.`);
         if (session.walrusBlobId) {
           walrusBlobId = session.walrusBlobId;
+          walrusAlreadyStored = true;
         } else {
           await new Promise(res => setTimeout(res, 2000));
           const refreshed = await redisService.getSession(session.nonce);
           walrusBlobId = refreshed?.walrusBlobId;
+          walrusAlreadyStored = !!walrusBlobId;
+          if (!walrusBlobId) {
+            throw new Error("Could not resolve Walrus blob ID after waiting for lock.");
+          }
         }
       } else {
         if (session.walrusBlobId) {
           walrusBlobId = session.walrusBlobId;
+          walrusAlreadyStored = true;
           console.log('Reusing existing Walrus blob ID:', walrusBlobId);
         } else {
           const invoiceMetadata = {
@@ -553,7 +574,11 @@ router.post("/webhook", validateWebhookAuth, async (req: Request, res: Response)
             fiatMethod: session.method || "bank_transfer",
             timestamp: new Date().toISOString()
           };
-          walrusBlobId = await walrusService.uploadInvoice(invoiceMetadata);
+          // In SDK mode: prepareInvoice computes blobId without storing.
+          // In publisher mode: resolveBlobId uploads to get blobId.
+          const resolved = await walrusService.resolveBlobId(invoiceMetadata);
+          walrusBlobId = resolved.blobId;
+          walrusAlreadyStored = resolved.alreadyStored;
         }
       }
     } finally {
@@ -561,6 +586,7 @@ router.post("/webhook", validateWebhookAuth, async (req: Request, res: Response)
         await redisService.releaseLock(lockKey, lockOwner);
       }
     }
+
     // 3. Execute settle_fiat PTB on Sui via gRPC operator signer
     const onChainResult = await suiService.executeSettleFiat(
       settlementAmount,
@@ -570,7 +596,29 @@ router.post("/webhook", validateWebhookAuth, async (req: Request, res: Response)
       sessionCoinType
     );
 
-    // 4. Update session inside Redis as fully SETTLED
+    // 4. If SDK mode and blob was only prepared (not stored), commit it now after successful PTB
+    if (!walrusAlreadyStored && walrusBlobId) {
+      try {
+        const invoiceMetadata = {
+          nonce: session.nonce,
+          amountNaira: amount,
+          exchangeRate: currentRate,
+          amountSettled: settlementAmount / 10 ** decimals,
+          settlementToken: sessionCoinType,
+          merchantAddress: session.merchantAddress,
+          fiatMethod: session.method || "bank_transfer",
+          timestamp: new Date().toISOString()
+        };
+        await walrusService.uploadInvoice(invoiceMetadata);
+        logger.success("WEBHOOK", `Walrus receipt committed after successful PTB: ${walrusBlobId}`);
+      } catch (walrusErr: any) {
+        logger.error("WEBHOOK", `Walrus post-PTB commit failed for ${session.nonce}: ${walrusErr.message}. Blob ID was already in receipt.`);
+        // Non-fatal: the blob ID was baked into the on-chain receipt.
+        // The merchant can retrieve the off-chain data from the on-chain event.
+      }
+    }
+
+    // 5. Update session inside Redis as fully SETTLED
     await redisService.updateSessionStatus(session.nonce, "SETTLED", {
       txDigest: onChainResult.txDigest,
       walrusBlobId
@@ -647,7 +695,41 @@ router.post("/stripe-webhook", async (req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     };
 
-    const walrusBlobId = await walrusService.uploadInvoice(invoiceMetadata);
+    // Resolve Walrus blob ID (prepare-then-upload-after-PTB in SDK mode) with idempotency lock
+    const lockKey = `uploadLock:stripe:${session.nonce}`;
+    let lockOwner: string | null = null;
+    let walrusBlobId: string;
+    let walrusAlreadyStored = false;
+    try {
+      lockOwner = await redisService.acquireLock(lockKey, 30);
+      if (!lockOwner) {
+        console.warn(`Stripe upload lock not acquired for ${session.nonce}; assuming another worker is handling it.`);
+        if (session.walrusBlobId) {
+          walrusBlobId = session.walrusBlobId;
+          walrusAlreadyStored = true;
+        } else {
+          await new Promise(res => setTimeout(res, 2000));
+          const refreshed = await redisService.getSession(session.nonce);
+          walrusBlobId = refreshed?.walrusBlobId;
+          walrusAlreadyStored = !!walrusBlobId;
+          if (!walrusBlobId) throw new Error("Could not resolve Walrus blob ID after waiting for lock.");
+        }
+      } else {
+        if (session.walrusBlobId) {
+          walrusBlobId = session.walrusBlobId;
+          walrusAlreadyStored = true;
+          console.log('Reusing existing Walrus blob ID:', walrusBlobId);
+        } else {
+          const resolved = await walrusService.resolveBlobId(invoiceMetadata);
+          walrusBlobId = resolved.blobId;
+          walrusAlreadyStored = resolved.alreadyStored;
+        }
+      }
+    } finally {
+      if (lockOwner) {
+        await redisService.releaseLock(lockKey, lockOwner);
+      }
+    }
 
     const onChainResult = await suiService.executeSettleFiat(
       settlementAmount,
@@ -656,6 +738,16 @@ router.post("/stripe-webhook", async (req: Request, res: Response) => {
       walrusBlobId,
       sessionCoinType
     );
+
+    // Commit Walrus blob after successful PTB (SDK mode only)
+    if (!walrusAlreadyStored && walrusBlobId) {
+      try {
+        await walrusService.uploadInvoice(invoiceMetadata);
+        logger.success("STRIPE-WEBHOOK", `Walrus receipt committed after successful PTB: ${walrusBlobId}`);
+      } catch (walrusErr: any) {
+        logger.error("STRIPE-WEBHOOK", `Walrus post-PTB commit failed for ${nonce}: ${walrusErr.message}`);
+      }
+    }
 
     await redisService.updateSessionStatus(session.nonce, "SETTLED", {
       txDigest: onChainResult.txDigest,

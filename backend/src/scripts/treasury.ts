@@ -11,13 +11,13 @@ import { getEnv } from "../config/env.js";
 import { getDefaultCoin, getSupportedCoinList, getCoinConfig, getDecimals } from "../config/coins.js";
 
 // Load configuration
-const SUI_RPC_ENDPOINT = getEnv("SUI_RPC_ENDPOINT", "https://fullnode.testnet.sui.io:443");
 const SUI_NETWORK = getEnv("SUI_NETWORK", "testnet") as any;
-const PACKAGE_ID = getEnv("PACKAGE_ID");
-const TREASURY_ID = getEnv("TREASURY_ID");
+const SUI_RPC_ENDPOINT = getEnv(`SUI_RPC_ENDPOINT_${SUI_NETWORK}`) || getEnv("SUI_RPC_ENDPOINT", `https://fullnode.${SUI_NETWORK}.sui.io:443`);
+const PACKAGE_ID = getEnv(`PACKAGE_ID_${SUI_NETWORK}`);
+const TREASURY_ID = getEnv(`TREASURY_ID_${SUI_NETWORK}`);
 const SUI_OPERATOR_PRIVATE_KEY = getEnv("SUI_OPERATOR_PRIVATE_KEY");
 
-const TREASURY_ADMIN_CAP_ID = getEnv("TREASURY_ADMIN_CAP_ID", "");
+const TREASURY_ADMIN_CAP_ID = getEnv(`TREASURY_ADMIN_CAP_ID_${SUI_NETWORK}`, "");
 
 async function findCoin(client: SuiJsonRpcClient, address: string, coinType: string, amount: bigint): Promise<string> {
   const response = await fetch(SUI_RPC_ENDPOINT, {
