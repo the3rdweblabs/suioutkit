@@ -25,7 +25,7 @@
   "author": "SuiOutKit Team",
   "license": "GPL-3.0",
   "dependencies": {
-    "@mysten/payment-kit": "^0.2.1",
+    "@mysten/payment-kit": "^0.2.3",
     "@mysten/sui": "^2.19.0",
     "@mysten/walrus": "^1.2.1",
     "cors": "^2.8.6",
