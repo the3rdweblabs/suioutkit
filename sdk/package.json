@@ -34,7 +34,7 @@
   "dependencies": {
     "@mysten/dapp-kit-core": "^1.6.18",
     "@mysten/payment-kit": "^0.2.18",
-    "@mysten/sui": "^2.26.2",
+    "@mysten/sui": "^3.0.1",
     "@stripe/stripe-js": "^10.3.0",
     "lucide-react": "^1.33.0",
     "qrcode": "^1.5.4",
