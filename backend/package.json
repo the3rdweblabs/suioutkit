@@ -27,7 +27,7 @@
   "license": "AGPL-3.0-only-or-later",
   "dependencies": {
     "@mysten/payment-kit": "^0.2.18",
-    "@mysten/sui": "^2.26.2",
+    "@mysten/sui": "^3.0.1",
     "@mysten/walrus": "^1.2.19",
     "cors": "^2.8.6",
     "dotenv": "^18.0.10",
