@@ -32,7 +32,7 @@
     "url": "https://github.com/the3rdweblabs/suioutkit/issues"
   },
   "dependencies": {
-    "@mysten/dapp-kit-core": "^1.6.18",
+    "@mysten/dapp-kit-core": "^2.0.1",
     "@mysten/payment-kit": "^0.2.18",
     "@mysten/sui": "^2.26.2",
     "@stripe/stripe-js": "^10.3.0",
