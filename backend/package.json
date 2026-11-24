@@ -34,7 +34,7 @@
     "express": "^5.2.1",
     "ioredis": "^6.0.0",
     "node-fetch": "^3.3.2",
-    "stripe": "^22.5.0"
+    "stripe": "^23.2.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
